@@ -1,0 +1,1 @@
+{"name":"HandShooter.Editor","references":["HandShooter.Runtime"],"includePlatforms":["Editor"]}
