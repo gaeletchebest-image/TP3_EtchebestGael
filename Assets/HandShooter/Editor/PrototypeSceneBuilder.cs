@@ -12,6 +12,27 @@ namespace HandShooter.Editor
     {
         public const string ScenePath = "Assets/Scenes/HandShooterPrototype.unity";
         public const string SettingsPath = "Assets/HandShooter/Settings/ShooterSettings.asset";
+        public const string TurretPrefabPath = "Assets/HandShooter/Prefabs/EnemyTurret.prefab";
+
+        [InitializeOnLoadMethod]
+        private static void EnsureSceneObjectsOnEditorLoad()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                if (EditorApplication.isPlayingOrWillChangePlaymode || SceneManager.GetActiveScene().path != ScenePath) return;
+                var scene = SceneManager.GetActiveScene();
+                var player = Object.FindFirstObjectByType<PrototypePlayer>();
+                if (player && (!player.deathScreen || !player.deathHint)) EnsureDeathScreen();
+                var turret = Object.FindFirstObjectByType<TurretEnemy>();
+                if (turret && !PrefabUtility.IsPartOfPrefabInstance(turret.gameObject))
+                {
+                    ConfigureTurretVisuals(turret);
+                    ConvertTurretToPrefab(turret);
+                }
+                if (scene.isDirty) EditorSceneManager.SaveScene(scene);
+            };
+        }
+
         [MenuItem("Hand Shooter/Open or Create Prototype")]
         public static void Create()
         {
@@ -21,6 +42,8 @@ namespace HandShooter.Editor
                 var existingScene = EditorSceneManager.OpenScene(ScenePath);
                 EnsureFuelPickups();
                 EnsureTurret();
+                EnsureDeathScreen();
+                ConvertTurretToPrefab();
                 EditorSceneManager.SaveScene(existingScene);
                 Selection.activeObject = AssetDatabase.LoadAssetAtPath<ShooterSettings>(SettingsPath);
                 return;
@@ -110,7 +133,9 @@ namespace HandShooter.Editor
             player.weapon = weapon;
             var menu = new GameObject("Hand Menu").AddComponent<HandMenu>(); menu.player = player; menu.weapon = weapon;
             CreateSceneHud(menu);
+            EnsureDeathScreen();
             EnsureTurret();
+            ConvertTurretToPrefab();
             EditorSceneManager.SaveScene(scene, ScenePath);
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true)); EditorBuildSettings.scenes = scenes.ToArray();
@@ -118,6 +143,46 @@ namespace HandShooter.Editor
             Debug.Log("Hand Shooter prototype ready: " + ScenePath);
         }
 
+
+        [MenuItem("Hand Shooter/Add Death Screen")]
+        public static void EnsureDeathScreen()
+        {
+            var player = Object.FindFirstObjectByType<PrototypePlayer>();
+            if (!player) return;
+            var overlay = player.deathScreen;
+            if (!overlay)
+            {
+                var canvas = Object.FindFirstObjectByType<Canvas>();
+                if (!canvas) return;
+                overlay = UiImage("Death Screen", canvas.transform, Vector2.zero, Vector2.one,
+                    new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.025f, 0.035f, 0.045f, 0.96f));
+                UiImage("Death Accent", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(0.5f, 0.5f), new Vector2(0f, 102f), new Vector2(72f, 4f), new Color(1f, 0.25f, 0.23f));
+                UiText("Death Eyebrow", overlay.transform, "HAND / LAB     ·     PROTOTYPE", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(0.5f, 0.5f), new Vector2(0f, 160f), new Vector2(500f, 28f), 15,
+                    new Color(0.58f, 0.67f, 0.72f), TextAnchor.MiddleCenter);
+                UiText("Death Title", overlay.transform, "ELIMINADO", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(0.5f, 0.5f), new Vector2(0f, 36f), new Vector2(760f, 100f), 64,
+                    new Color(0.96f, 0.97f, 0.98f), TextAnchor.MiddleCenter);
+                UiText("Death Subtitle", overlay.transform, "Un impacto de la torreta terminó la partida.", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(0.5f, 0.5f), new Vector2(0f, -35f), new Vector2(680f, 36f), 20,
+                    new Color(0.67f, 0.73f, 0.77f), TextAnchor.MiddleCenter);
+            }
+            var hint = overlay.transform.Find("Death Hint")?.GetComponent<Text>();
+            if (!hint)
+                hint = UiText("Death Hint", overlay.transform, "APRETÁ CUALQUIER TECLA PARA VOLVER A INTENTAR",
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(0f, -120f), new Vector2(640f, 32f), 14,
+                    new Color(0.27f, 0.93f, 0.75f), TextAnchor.MiddleCenter);
+            else
+                hint.text = "APRETÁ CUALQUIER TECLA PARA VOLVER A INTENTAR";
+            overlay.SetActive(false);
+            player.deathScreen = overlay;
+            player.deathHint = hint;
+            EditorUtility.SetDirty(player);
+            EditorSceneManager.MarkSceneDirty(player.gameObject.scene);
+            Selection.activeGameObject = overlay;
+        }
 
         [MenuItem("Hand Shooter/Add Turret")]
         public static void EnsureTurret()
@@ -146,6 +211,33 @@ namespace HandShooter.Editor
             ConfigureTurretVisuals(turret);
             EditorSceneManager.MarkSceneDirty(body.scene);
         }
+
+        [MenuItem("Hand Shooter/Convert Turret to Prefab")]
+        public static void ConvertTurretToPrefab()
+        {
+            var turret = Object.FindFirstObjectByType<TurretEnemy>();
+            if (!turret)
+            {
+                Debug.LogWarning("No Enemy Turret exists in the active scene.");
+                return;
+            }
+            ConvertTurretToPrefab(turret);
+        }
+
+        private static void ConvertTurretToPrefab(TurretEnemy turret)
+        {
+            if (PrefabUtility.IsPartOfPrefabInstance(turret.gameObject)) return;
+            PrefabUtility.SaveAsPrefabAssetAndConnect(turret.gameObject, TurretPrefabPath,
+                InteractionMode.AutomatedAction, out bool success);
+            if (!success)
+            {
+                Debug.LogError("Could not save the Enemy Turret prefab at " + TurretPrefabPath, turret);
+                return;
+            }
+            EditorSceneManager.MarkSceneDirty(turret.gameObject.scene);
+            Debug.Log("Enemy Turret saved and connected as a prefab: " + TurretPrefabPath, turret);
+        }
+
         private static void ConfigureTurretVisuals(TurretEnemy turret)
         {
             var body = turret.gameObject;

@@ -15,7 +15,9 @@ namespace HandShooter
             speed = Mathf.Max(0.1f, settings.projectileSpeed);
             radius = Mathf.Max(0.01f, settings.projectileRadius);
             life = Mathf.Max(0.1f, settings.projectileLifetime);
-            mask = settings.hitMask.value & ~4;
+            // The prototype player uses Unity's Ignore Raycast layer for its first-person visuals.
+            // Include that layer so the CharacterController can still receive enemy hits.
+            mask = settings.hitMask.value | (1 << 2);
         }
         private void Update()
         {
@@ -23,7 +25,8 @@ namespace HandShooter
             foreach (var hit in Physics.SphereCastAll(transform.position, radius, direction, distance, mask, QueryTriggerInteraction.Ignore))
             {
                 if (owner && hit.transform.IsChildOf(owner)) continue;
-                // Enemy shots collide but intentionally do not apply damage yet.
+                var player = hit.collider.GetComponentInParent<PrototypePlayer>();
+                if (player) player.Die();
                 Destroy(gameObject);
                 return;
             }

@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace HandShooter
 {
@@ -10,7 +12,10 @@ namespace HandShooter
         public ShooterSettings settings;
         public Camera viewCamera;
         public HandWeapon weapon;
+        public GameObject deathScreen;
+        public Text deathHint;
         public bool IsMenuOpen { get; private set; }
+        public bool IsDead { get; private set; }
         public float DashCooldownFraction => settings == null || settings.dashCooldown <= 0f
             ? 1f : Mathf.Clamp01(1f - dashCooldownRemaining / settings.dashCooldown);
         private CharacterController controller;
@@ -23,8 +28,21 @@ namespace HandShooter
         private void Start() { SetMenuOpen(false); FuelTankPickup.SpawnDefaultPickups(transform); }
         private void Update()
         {
-            if (!settings || !viewCamera) return;
             var keyboard = Keyboard.current;
+            if (keyboard != null &&
+                (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed) &&
+                keyboard.rKey.wasPressedThisFrame)
+            {
+                RestartScene();
+                return;
+            }
+            if (IsDead)
+            {
+                if (deathHint) deathHint.enabled = Mathf.Repeat(Time.unscaledTime, 0.9f) < 0.6f;
+                if (keyboard != null && keyboard.anyKey.wasPressedThisFrame) RestartScene();
+                return;
+            }
+            if (!settings || !viewCamera) return;
             if (keyboard != null && (keyboard[settings.menuKey].wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
                 SetMenuOpen(!IsMenuOpen);
             viewCamera.fieldOfView = settings.fieldOfView;
@@ -66,6 +84,7 @@ namespace HandShooter
         }
         public void SetMenuOpen(bool open)
         {
+            if (IsDead) return;
             if (open && !IsMenuOpen) { previousTimeScale = Time.timeScale; Time.timeScale = 0f; }
             if (!open && IsMenuOpen) Time.timeScale = previousTimeScale;
             IsMenuOpen = open;
@@ -73,7 +92,24 @@ namespace HandShooter
             Cursor.visible = open;
             if (weapon) weapon.RequireTriggerRelease();
         }
-        private void OnApplicationFocus(bool focused) { if (!focused && Application.isPlaying) SetMenuOpen(true); }
+        public void Die()
+        {
+            if (IsDead) return;
+            IsDead = true;
+            IsMenuOpen = false;
+            Time.timeScale = 0f;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            if (weapon) weapon.RequireTriggerRelease();
+            if (deathScreen) deathScreen.SetActive(true);
+            else Debug.LogError("Player death screen is not assigned in the scene.", this);
+        }
+        private void RestartScene()
+        {
+            Time.timeScale = 1f;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().path);
+        }
+        private void OnApplicationFocus(bool focused) { if (!focused && Application.isPlaying && !IsDead) SetMenuOpen(true); }
         private void OnDisable()
         {
             if (IsMenuOpen) Time.timeScale = previousTimeScale;
