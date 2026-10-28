@@ -5,6 +5,8 @@ namespace HandShooter
     public sealed class DamageTarget : MonoBehaviour
     {
         public ShooterSettings settings;
+        public TurretSettings turretSettings;
+        private float InitialHealth => turretSettings ? turretSettings.initialHealth : settings.targetHealth;
         public TextMesh label;
         public float Health { get; private set; }
         public float LastDamage { get; private set; }
@@ -31,6 +33,7 @@ namespace HandShooter
             if (Health <= 0)
             {
                 DestroyedCount++;
+                if (turretSettings) { body.enabled = hitCollider.enabled = false; Destroy(gameObject); return true; }
                 respawnAt = Time.time + settings.targetRespawnDelay;
                 body.enabled = hitCollider.enabled = false;
             }
@@ -39,7 +42,7 @@ namespace HandShooter
         }
         public void ResetTarget()
         {
-            Health = settings.targetHealth;
+            Health = InitialHealth;
             LastDamage = 0;
             respawnAt = -1f;
             if (body) body.enabled = true;
@@ -54,7 +57,7 @@ namespace HandShooter
         }
         private void RefreshLabel()
         {
-            if (label) label.text = Health <= 0 ? "DESTRUIDO" : $"{Health:0.#} / {settings.targetHealth:0.#}" + (LastDamage > 0 ? $"\n-{LastDamage:0.#}" : "");
+            if (label) label.text = Health <= 0 ? "DESTRUIDO" : $"{Health:0.#} / {InitialHealth:0.#}" + (LastDamage > 0 ? $"\n-{LastDamage:0.#}" : "");
         }
     }
 }

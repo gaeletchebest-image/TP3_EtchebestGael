@@ -20,6 +20,7 @@ namespace HandShooter.Editor
             {
                 var existingScene = EditorSceneManager.OpenScene(ScenePath);
                 EnsureFuelPickups();
+                EnsureTurret();
                 EditorSceneManager.SaveScene(existingScene);
                 Selection.activeObject = AssetDatabase.LoadAssetAtPath<ShooterSettings>(SettingsPath);
                 return;
@@ -109,6 +110,7 @@ namespace HandShooter.Editor
             player.weapon = weapon;
             var menu = new GameObject("Hand Menu").AddComponent<HandMenu>(); menu.player = player; menu.weapon = weapon;
             CreateSceneHud(menu);
+            EnsureTurret();
             EditorSceneManager.SaveScene(scene, ScenePath);
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true)); EditorBuildSettings.scenes = scenes.ToArray();
@@ -117,6 +119,63 @@ namespace HandShooter.Editor
         }
 
 
+        [MenuItem("Hand Shooter/Add Turret")]
+        public static void EnsureTurret()
+        {
+            var existing = Object.FindFirstObjectByType<TurretEnemy>();
+            if (existing) { ConfigureTurretVisuals(existing); return; }
+            const string path = "Assets/HandShooter/Settings/TurretSettings.asset";
+            var settings = AssetDatabase.LoadAssetAtPath<TurretSettings>(path);
+            if (!settings)
+            {
+                settings = ScriptableObject.CreateInstance<TurretSettings>();
+                AssetDatabase.CreateAsset(settings, path);
+            }
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "Enemy Turret";
+            body.transform.position = new Vector3(0f, 1f, 12f);
+            body.transform.localScale = new Vector3(1.2f, 2f, 1.2f);
+            body.GetComponent<Renderer>().sharedMaterial = Material("Turret", new Color(0.7f, 0.12f, 0.15f));
+            var health = body.AddComponent<DamageTarget>();
+            health.turretSettings = settings;
+            var turret = body.AddComponent<TurretEnemy>();
+            turret.settings = settings;
+            turret.muzzle = new GameObject("Muzzle").transform;
+            turret.muzzle.SetParent(body.transform, false);
+            turret.muzzle.localPosition = new Vector3(0f, 0.3f, -0.65f);
+            ConfigureTurretVisuals(turret);
+            EditorSceneManager.MarkSceneDirty(body.scene);
+        }
+        private static void ConfigureTurretVisuals(TurretEnemy turret)
+        {
+            var body = turret.gameObject;
+            body.transform.localScale = new Vector3(1.25f, 1.6f, 0.35f);
+            var red = Material("Turret", new Color(0.85f, 0.08f, 0.1f));
+            red.SetColor("_BaseColor", new Color(0.85f, 0.08f, 0.1f));
+            EditorUtility.SetDirty(red);
+            body.GetComponent<Renderer>().sharedMaterial = red;
+            var support = Material("Wall", new Color(0.12f, 0.19f, 0.22f));
+            if (!body.transform.Find("Target base"))
+            {
+                var pedestal = Cube("Target base", body.transform.position + Vector3.down * 0.85f,
+                    new Vector3(2f, 0.3f, 1.5f), support, null);
+                pedestal.transform.SetParent(body.transform, true);
+                var post = Cube("Target post", body.transform.position + Vector3.down * 0.2f,
+                    new Vector3(0.12f, 1.6f, 0.12f), support, null);
+                post.transform.SetParent(body.transform, true);
+            }
+            var health = body.GetComponent<DamageTarget>();
+            health.turretSettings = turret.settings;
+            if (!health.label)
+                health.label = WorldText("", body.transform.position + new Vector3(0f, 1.2f, -0.25f),
+                    0.04f, Color.white, null);
+            health.label.name = "Turret Health";
+            health.label.transform.SetParent(body.transform, true);
+            if (turret.settings)
+                health.label.text = $"{turret.settings.initialHealth:0.#} / {turret.settings.initialHealth:0.#}";
+            EditorUtility.SetDirty(health);
+            EditorSceneManager.MarkSceneDirty(body.scene);
+        }
         private static void CreateSceneHud(HandMenu menu)
         {
             var canvasObject = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -260,4 +319,3 @@ namespace HandShooter.Editor
         }
     }
 }
-
