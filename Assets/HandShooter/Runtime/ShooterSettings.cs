@@ -14,6 +14,8 @@ namespace HandShooter
         [Header("Pulgar inactivo / proyectil (activo usa valores base)")]
         [Min(0.01f)] public float projectileDamageMultiplier = 2f;
         [Min(0.01f)] public float projectileCooldownMultiplier = 2f;
+        [Tooltip("Descuento de combustible del proyectil respecto al rayo. 0.5 = consume 50 % menos para el mismo daño base.")]
+        [Range(0f, 1f)] public float projectileFuelEfficiency = 0.5f;
         [Min(0.1f)] public float projectileSpeed = 12f;
         [Min(0.01f)] public float projectileRadius = 0.09f;
         [Min(0.1f)] public float projectileLifetime = 8f;
@@ -42,6 +44,10 @@ namespace HandShooter
         public bool initialThumbActive = true;
         [Header("Movimiento y cámara")]
         [Min(0.1f)] public float moveSpeed = 6f;
+        [Min(0.1f)] public float dashSpeed = 18f;
+        [Min(0.01f)] public float dashDuration = 0.2f;
+        [Min(0f)] public float dashCooldown = 1f;
+        public Key dashKey = Key.LeftShift;
         [Min(0.001f)] public float mouseSensitivity = 0.12f;
         [Range(30f, 89f)] public float pitchLimit = 85f;
         [Range(40f, 110f)] public float fieldOfView = 75f;
@@ -67,6 +73,16 @@ namespace HandShooter
                 interval *= Mathf.Max(0.01f, projectileCooldownMultiplier);
             }
             return new ShotStats(damage, Mathf.Max(0.02f, interval), hand.ThumbActive);
+        }
+        public float EvaluateFuelCost(ShotStats shot, float fuelPerDamage)
+        {
+            float costDamage = shot.Damage;
+            if (!shot.Hitscan)
+            {
+                costDamage /= Mathf.Max(0.01f, projectileDamageMultiplier);
+                costDamage *= 1f - Mathf.Clamp01(projectileFuelEfficiency);
+            }
+            return costDamage * Mathf.Max(0.01f, fuelPerDamage);
         }
         public ExplosionStats EvaluateExplosion(float directDamage)
         {

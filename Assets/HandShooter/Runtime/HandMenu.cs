@@ -13,6 +13,7 @@ namespace HandShooter
         public Image fuelFill;
         public RectTransform fuelFillRect;
         public Text fuelLabel, tankLabel, debugText, controls, crosshair, hitText;
+        public Image dashCooldownFill;
         public GameObject debugPanel;
         public bool showDebugStats;
         public GameObject MenuRoot { get; private set; }
@@ -107,16 +108,23 @@ namespace HandShooter
             fuelFillRect.anchorMax = new Vector2(fuelFraction, 1f);
             fuelFillRect.offsetMin = fuelFillRect.offsetMax = Vector2.zero;
             fuelFill.color = fuelFraction <= 0.25f ? orange : mint;
+            if (dashCooldownFill)
+            {
+                dashCooldownFill.transform.parent.gameObject.SetActive(!player.IsMenuOpen);
+                float dashFraction = player.DashCooldownFraction;
+                dashCooldownFill.rectTransform.localScale = new Vector3(dashFraction, 1f, 1f);
+                dashCooldownFill.color = dashFraction >= 1f ? mint : orange;
+            }
             fuelLabel.text = "COMBUSTIBLE";
             tankLabel.text = $"{weapon.Fuel:0}/{weapon.tankCapacity:0}   ·   TANQUES ×{weapon.SpareTankCount}";
-            if (controls) controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey}  MOVER     MOUSE  APUNTAR     CLIC  DISPARAR     R  RECARGAR     {player.settings.menuKey}  MANO";
-            debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {stats.Damage * weapon.fuelPerDamage:0.##} COMBUSTIBLE / DISPARO";
+            if (controls) controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey}  MOVER     {player.settings.dashKey}  DASH     MOUSE  APUNTAR     CLIC  DISPARAR     R  RECARGAR     {player.settings.menuKey}  MANO";
+            debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.settings.EvaluateFuelCost(stats, weapon.fuelPerDamage):0.##} COMBUSTIBLE / DISPARO";
             if (!stats.Hitscan) debugText.text += $"\nÁREA {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
             if (hitText) hitText.text = Time.time - weapon.LastHitTime < 0.5f ? $"IMPACTO  -{weapon.LastHitDamage:0.##}" : "";
             if (!player.IsMenuOpen) return;
             mode.text = stats.Hitscan ? "RAYCAST / INSTANTÁNEO" : "PROYECTIL / EXPLOSIVO";
             mode.color = accent;
-            rules.text = $"Siempre queda al menos un cañón activo.\nLos dedos activos forman un solo grupo.\nPulgar activo: raycast, valores base.\nProyectil: daño ×{weapon.settings.projectileDamageMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}.\nExplosión: {weapon.settings.explosionDamageFraction:P0} del daño directo.";
+            rules.text = $"Siempre queda al menos un cañón activo.\nLos dedos activos forman un solo grupo.\nPulgar activo: raycast, valores base.\nProyectil: daño ×{weapon.settings.projectileDamageMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}, combustible −{weapon.settings.projectileFuelEfficiency:P0}.\nExplosión: {weapon.settings.explosionDamageFraction:P0} del daño directo.";
             menuStats.text = $"{stats.Damage:0.##}    DAÑO POR DISPARO\n\n{stats.Interval:0.##} s    ENTRE DISPAROS\n{1f / stats.Interval:0.##}    DISPAROS / SEGUNDO";
             if (!stats.Hitscan) menuStats.text += $"\nEXPLOSIÓN {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
             palmText.text = $"{hand.ActiveCount:00} ACTIVO(S) / {4 - hand.ActiveCount:00} INACTIVO(S)\nUN SOLO GRUPO / UN CAÑÓN";

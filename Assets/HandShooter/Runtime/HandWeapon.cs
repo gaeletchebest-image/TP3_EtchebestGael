@@ -62,7 +62,7 @@ namespace HandShooter
         {
             if (cooldownFraction > 0f || IsReloading || player.IsMenuOpen || Time.timeScale == 0f) return false;
             ShotStats stats = Stats;
-            float fuelCost = stats.Damage * Mathf.Max(0.01f, fuelPerDamage);
+            float fuelCost = settings.EvaluateFuelCost(stats, fuelPerDamage);
             if (Fuel + 0.0001f < fuelCost) return false;
             Fuel = Mathf.Max(0f, Fuel - fuelCost);
             FuelChanged?.Invoke();

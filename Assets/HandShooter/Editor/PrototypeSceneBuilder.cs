@@ -129,6 +129,9 @@ namespace HandShooter.Editor
             var track = UiImage("Fuel Track", canvas.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -48f), new Vector2(360f, 22f), new Color(0.08f, 0.13f, 0.15f, 0.95f));
             var fill = UiImage("Fuel Fill", track.transform, Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero, mint);
             menu.fuelFill = fill.GetComponent<Image>(); menu.fuelFillRect = fill.GetComponent<RectTransform>();
+            var dashTrack = UiImage("Dash Cooldown Track", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f), new Vector2(0f, 38f), new Vector2(280f, 14f), new Color(0.08f, 0.13f, 0.15f, 0.95f));
+            var dashFill = UiImage("Dash Cooldown Fill", dashTrack.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, mint);
+            menu.dashCooldownFill = dashFill.GetComponent<Image>();
             menu.fuelLabel = UiText("Fuel Label", canvas.transform, "COMBUSTIBLE", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(360f, 28f), 20, mint, TextAnchor.MiddleCenter);
             menu.tankLabel = UiText("Tank Label", canvas.transform, "100/100   ·   TANQUES ×2", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -76f), new Vector2(420f, 28f), 16, ink, TextAnchor.MiddleCenter);
             menu.debugPanel = UiImage("Debug Panel", canvas.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(26f, 26f), new Vector2(460f, 116f), new Color(0.03f, 0.07f, 0.09f, 0.94f));

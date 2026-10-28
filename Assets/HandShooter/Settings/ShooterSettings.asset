@@ -21,7 +21,8 @@ MonoBehaviour:
   - 0.2
   projectileDamageMultiplier: 2
   projectileCooldownMultiplier: 2
-  projectileSpeed: 12
+  projectileFuelEfficiency: 0.5
+  projectileSpeed: 10
   projectileRadius: 0.09
   projectileLifetime: 8
   projectilePrefab: {fileID: 8072563373845372616, guid: d2c6a05da59ec19468aada5b6edf2992, type: 3}
@@ -35,7 +36,7 @@ MonoBehaviour:
   range: 100
   hitMask:
     serializedVersion: 2
-    m_Bits: 4294967291
+    m_Bits: 51
   automaticFire: 1
   beamDuration: 0.07
   rayColor: {r: 0.2, g: 1, b: 0.85, a: 1}
@@ -44,6 +45,10 @@ MonoBehaviour:
   initialActiveFingers: 1
   initialThumbActive: 1
   moveSpeed: 6
+  dashSpeed: 20
+  dashDuration: 0.3
+  dashCooldown: 0.5
+  dashKey: 51
   mouseSensitivity: 0.12
   pitchLimit: 85
   fieldOfView: 75
@@ -55,4 +60,3 @@ MonoBehaviour:
   menuKey: 3
   targetHealth: 32
   targetRespawnDelay: 2
-

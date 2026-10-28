@@ -11,8 +11,13 @@ namespace HandShooter
         public Camera viewCamera;
         public HandWeapon weapon;
         public bool IsMenuOpen { get; private set; }
+        public float DashCooldownFraction => settings == null || settings.dashCooldown <= 0f
+            ? 1f : Mathf.Clamp01(1f - dashCooldownRemaining / settings.dashCooldown);
         private CharacterController controller;
         private float pitch, verticalVelocity;
+        private Vector3 dashDirection;
+        private float dashRemaining;
+        private float dashCooldownRemaining;
         private float previousTimeScale = 1f;
         private void Awake() { controller = GetComponent<CharacterController>(); }
         private void Start() { SetMenuOpen(false); FuelTankPickup.SpawnDefaultPickups(transform); }
@@ -24,6 +29,7 @@ namespace HandShooter
                 SetMenuOpen(!IsMenuOpen);
             viewCamera.fieldOfView = settings.fieldOfView;
             if (IsMenuOpen || Cursor.lockState != CursorLockMode.Locked) return;
+            dashCooldownRemaining = Mathf.Max(0f, dashCooldownRemaining - Time.deltaTime);
             if (Mouse.current != null)
             {
                 Vector2 delta = Mouse.current.delta.ReadValue() * settings.mouseSensitivity;
@@ -38,8 +44,25 @@ namespace HandShooter
                 move.y = (keyboard[settings.forwardKey].isPressed ? 1 : 0) - (keyboard[settings.backwardKey].isPressed ? 1 : 0);
             }
             move = Vector2.ClampMagnitude(move, 1f);
+            if (dashRemaining <= 0f && dashCooldownRemaining <= 0f && move.sqrMagnitude > 0f &&
+                keyboard != null && keyboard[settings.dashKey].wasPressedThisFrame)
+            {
+                dashDirection = (transform.right * move.x + transform.forward * move.y).normalized;
+                dashRemaining = Mathf.Max(0.01f, settings.dashDuration);
+                dashCooldownRemaining = Mathf.Max(0f, settings.dashCooldown);
+            }
             verticalVelocity = controller.isGrounded && verticalVelocity < 0 ? -2f : verticalVelocity + settings.gravity * Time.deltaTime;
-            controller.Move(((transform.right * move.x + transform.forward * move.y) * settings.moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+            Vector3 horizontalMovement;
+            if (dashRemaining > 0f)
+            {
+                horizontalMovement = dashDirection * Mathf.Max(0.1f, settings.dashSpeed);
+                dashRemaining = Mathf.Max(0f, dashRemaining - Time.deltaTime);
+            }
+            else
+            {
+                horizontalMovement = (transform.right * move.x + transform.forward * move.y) * settings.moveSpeed;
+            }
+            controller.Move((horizontalMovement + Vector3.up * verticalVelocity) * Time.deltaTime);
         }
         public void SetMenuOpen(bool open)
         {
