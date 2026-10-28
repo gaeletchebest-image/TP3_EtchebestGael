@@ -17,16 +17,41 @@ namespace HandShooter
         public float CooldownRemaining => cooldownFraction * Stats.Interval;
         public float LastHitDamage { get; private set; }
         public float LastHitTime { get; private set; } = -100f;
+        [Header("Combustible")]
+        [Min(0.01f)] public float tankCapacity = 100f;
+        [Min(0.01f)] public float fuelPerDamage = 1f;
+        [Min(0)] public int startingSpareTanks = 2;
+        [Header("Animación de recarga")]
+        [Min(0.1f)] public float reloadDuration = 1.25f;
+        [Min(0f)] public float reloadHandDip = 0.16f;
+        [Min(0f)] public float reloadHandTilt = 32f;
+        public float Fuel { get; private set; }
+        public int SpareTankCount { get; private set; }
+        public bool IsReloading { get; private set; }
+        public float FuelFraction => tankCapacity <= 0f ? 0f : Fuel / tankCapacity;
         public event Action<float> Hit;
+        public event Action FuelChanged;
         private float cooldownFraction;
         private bool requireRelease;
         private float recoil;
-        private void Awake() { Hand = new HandConfiguration(settings.initialActiveFingers, settings.initialThumbActive); }
+        private Vector3 handRestPosition;
+        private Quaternion handRestRotation;
+        private void Awake()
+        {
+            Hand = new HandConfiguration(settings.initialActiveFingers, settings.initialThumbActive);
+            Fuel = tankCapacity;
+            SpareTankCount = startingSpareTanks;
+            handRestPosition = transform.localPosition;
+            handRestRotation = transform.localRotation;
+        }
         public void RequireTriggerRelease() { requireRelease = true; }
         private void Update()
         {
             cooldownFraction = Mathf.Max(0f, cooldownFraction - Time.deltaTime / Stats.Interval);
             UpdateHandVisuals();
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.rKey.wasPressedThisFrame && !player.IsMenuOpen && Cursor.lockState == CursorLockMode.Locked)
+                BeginReloadFuel();
             var mouse = Mouse.current;
             if (mouse == null) return;
             if (!mouse.leftButton.isPressed) requireRelease = false;
@@ -35,8 +60,12 @@ namespace HandShooter
         }
         public bool TryFire()
         {
-            if (cooldownFraction > 0f || player.IsMenuOpen || Time.timeScale == 0f) return false;
+            if (cooldownFraction > 0f || IsReloading || player.IsMenuOpen || Time.timeScale == 0f) return false;
             ShotStats stats = Stats;
+            float fuelCost = stats.Damage * Mathf.Max(0.01f, fuelPerDamage);
+            if (Fuel + 0.0001f < fuelCost) return false;
+            Fuel = Mathf.Max(0f, Fuel - fuelCost);
+            FuelChanged?.Invoke();
             cooldownFraction = 1f;
             recoil = 1f;
             Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
@@ -73,6 +102,44 @@ namespace HandShooter
                 projectile.Initialize(direction, stats.Damage, settings, this);
             }
             return true;
+        }
+        public bool ReloadFuel()
+        {
+            if (IsReloading || SpareTankCount <= 0 || Fuel >= tankCapacity) return false;
+            SpareTankCount--;
+            Fuel = tankCapacity;
+            FuelChanged?.Invoke();
+            return true;
+        }
+        private bool BeginReloadFuel()
+        {
+            if (IsReloading || SpareTankCount <= 0 || Fuel >= tankCapacity) return false;
+            StartCoroutine(ReloadFuelAnimation());
+            return true;
+        }
+        private System.Collections.IEnumerator ReloadFuelAnimation()
+        {
+            IsReloading = true;
+            float duration = Mathf.Max(0.1f, reloadDuration);
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed = Mathf.Min(duration, elapsed + Time.deltaTime);
+                float dip = Mathf.Sin((elapsed / duration) * Mathf.PI);
+                transform.localPosition = handRestPosition + Vector3.down * (reloadHandDip * dip);
+                transform.localRotation = handRestRotation * Quaternion.Euler(reloadHandTilt * dip, 0f, -5f * dip);
+                yield return null;
+            }
+            transform.localPosition = handRestPosition;
+            transform.localRotation = handRestRotation;
+            IsReloading = false;
+            ReloadFuel();
+        }
+        public void AddFuelTank(int count = 1)
+        {
+            if (count <= 0) return;
+            SpareTankCount += count;
+            FuelChanged?.Invoke();
         }
         public void Damage(Collider collider, float damage)
         {

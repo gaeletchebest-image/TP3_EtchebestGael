@@ -3,6 +3,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 namespace HandShooter.Editor
@@ -17,7 +18,9 @@ namespace HandShooter.Editor
             if (EditorApplication.isPlaying) { Debug.LogWarning("Stop Play mode before creating the prototype."); return; }
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath))
             {
-                EditorSceneManager.OpenScene(ScenePath);
+                var existingScene = EditorSceneManager.OpenScene(ScenePath);
+                EnsureFuelPickups();
+                EditorSceneManager.SaveScene(existingScene);
                 Selection.activeObject = AssetDatabase.LoadAssetAtPath<ShooterSettings>(SettingsPath);
                 return;
             }
@@ -56,6 +59,7 @@ namespace HandShooter.Editor
             light.type = LightType.Directional; light.intensity = 1.5f; light.shadows = LightShadows.Soft;
             light.transform.rotation = Quaternion.Euler(50, -30, 0);
             var arena = new GameObject("Test Range").transform;
+            CreateFuelPickups();
             Cube("Floor", new Vector3(0, -0.25f, 10), new Vector3(32, 0.5f, 40), floor, arena);
             Cube("Backstop", new Vector3(0, 3f, 30), new Vector3(32, 6, 0.5f), wall, arena);
             Cube("Left wall", new Vector3(-16, 2, 10), new Vector3(0.5f, 4, 40), wall, arena);
@@ -104,11 +108,127 @@ namespace HandShooter.Editor
             weapon.muzzle.SetParent(hand, false); weapon.muzzle.localPosition = new Vector3(-0.06f, 0.04f, 0.38f);
             player.weapon = weapon;
             var menu = new GameObject("Hand Menu").AddComponent<HandMenu>(); menu.player = player; menu.weapon = weapon;
+            CreateSceneHud(menu);
             EditorSceneManager.SaveScene(scene, ScenePath);
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true)); EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets(); Selection.activeObject = settings;
             Debug.Log("Hand Shooter prototype ready: " + ScenePath);
+        }
+
+
+        private static void CreateSceneHud(HandMenu menu)
+        {
+            var canvasObject = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            var canvas = canvasObject.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 10;
+            var scaler = canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1366, 768); scaler.matchWidthOrHeight = 0.5f;
+            menu.canvas = canvas;
+            Color ink = new Color(0.9f, 0.95f, 0.97f), muted = new Color(0.53f, 0.64f, 0.69f);
+            Color mint = new Color(0.27f, 0.93f, 0.75f), orange = new Color(1f, 0.59f, 0.31f);
+            var track = UiImage("Fuel Track", canvas.transform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -48f), new Vector2(360f, 22f), new Color(0.08f, 0.13f, 0.15f, 0.95f));
+            var fill = UiImage("Fuel Fill", track.transform, Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero, mint);
+            menu.fuelFill = fill.GetComponent<Image>(); menu.fuelFillRect = fill.GetComponent<RectTransform>();
+            menu.fuelLabel = UiText("Fuel Label", canvas.transform, "COMBUSTIBLE", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(360f, 28f), 20, mint, TextAnchor.MiddleCenter);
+            menu.tankLabel = UiText("Tank Label", canvas.transform, "100/100   ·   TANQUES ×2", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -76f), new Vector2(420f, 28f), 16, ink, TextAnchor.MiddleCenter);
+            menu.debugPanel = UiImage("Debug Panel", canvas.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(26f, 26f), new Vector2(460f, 116f), new Color(0.03f, 0.07f, 0.09f, 0.94f));
+            menu.debugText = UiText("Debug Text", menu.debugPanel.transform, "", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 16, ink, TextAnchor.UpperLeft);
+            RectTransform debugRect = menu.debugText.rectTransform; debugRect.offsetMin = new Vector2(16f, 12f); debugRect.offsetMax = new Vector2(-16f, -12f);
+            menu.debugPanel.SetActive(false);
+            menu.controls = UiText("Controls", canvas.transform, "", Vector2.right, Vector2.right, Vector2.one, new Vector2(-26f, 28f), new Vector2(850f, 26f), 13, muted, TextAnchor.MiddleRight);
+            menu.crosshair = UiText("Crosshair", canvas.transform, "+", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(32f, 32f), 25, mint, TextAnchor.MiddleCenter);
+            menu.hitText = UiText("Hit Feedback", canvas.transform, "", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -48f), new Vector2(240f, 45f), 19, orange, TextAnchor.MiddleCenter);
+            CreateSceneHandMenu(canvas.transform, ink, muted, mint, orange);
+        }
+        private static void CreateSceneHandMenu(Transform canvas, Color ink, Color muted, Color mint, Color orange)
+        {
+            var overlay = UiImage("Hand Menu Overlay", canvas, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.015f, 0.03f, 0.045f, 0.86f));
+            var panel = UiImage("Hand Menu Panel", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 650f), new Color(0.045f, 0.075f, 0.095f, 1f));
+            UiImage("Menu Accent", panel.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, new Vector2(980f, 3f), mint);
+            UiText("Menu Title", panel.transform, "CONFIGURAR MANO", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(34f, -28f), new Vector2(700f, 42f), 32, ink, TextAnchor.UpperLeft);
+            UiText("Menu Subtitle", panel.transform, "Juntá los dedos para ganar potencia. Liberalos para disparar más rápido.", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -78f), new Vector2(900f, 30f), 17, muted, TextAnchor.UpperLeft);
+            UiText("Finger Section Label", panel.transform, "01 / DEDOS PRINCIPALES", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -135f), new Vector2(420f, 30f), 15, mint, TextAnchor.UpperLeft);
+            UiText("Result Section Label", panel.transform, "02 / RESULTADO", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -135f), new Vector2(400f, 30f), 15, mint, TextAnchor.UpperLeft);
+            string[] names = { "ÍNDICE", "MEDIO", "ANULAR", "MEÑIQUE" };
+            float[] heights = { 158f, 188f, 170f, 128f };
+            for (int i = 0; i < names.Length; i++)
+                UiButton($"Finger Button {i + 1}", $"Finger Label {i + 1}", panel.transform, new Vector2(72f + i * 92f, -(372f - heights[i])), new Vector2(82f, heights[i]), new Color(0.13f, 0.24f, 0.26f), $"{i + 1:00}\n\n{names[i]}\n\nACTIVO", 12, ink);
+            var palm = UiImage("Palm", panel.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(66f, -380f), new Vector2(374f, 86f), new Color(0.09f, 0.16f, 0.18f));
+            var palmText = UiText("Palm Label", palm.transform, "", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 19, ink, TextAnchor.MiddleCenter);
+            palmText.rectTransform.offsetMin = new Vector2(20f, 12f); palmText.rectTransform.offsetMax = new Vector2(-20f, -12f);
+            UiButton("Thumb Button", "Thumb Label", panel.transform, new Vector2(66f, -482f), new Vector2(374f, 72f), mint, "PULGAR", 17, new Color(0.025f, 0.07f, 0.08f));
+            UiText("Menu Mode", panel.transform, "RAYCAST / INSTANTÁNEO", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -184f), new Vector2(410f, 40f), 26, mint, TextAnchor.UpperLeft);
+            UiText("Menu Stats", panel.transform, "", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -240f), new Vector2(410f, 150f), 20, ink, TextAnchor.UpperLeft);
+            UiText("Rules Header", panel.transform, "REGLAS DE LA MANO", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -405f), new Vector2(410f, 25f), 13, mint, TextAnchor.UpperLeft);
+            UiText("Rules Text", panel.transform, "", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -441f), new Vector2(415f, 102f), 15, muted, TextAnchor.UpperLeft);
+            UiText("Menu Footer", panel.transform, "Los botones atenuados romperían el grupo activo.", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -574f), new Vector2(460f, 42f), 13, muted, TextAnchor.UpperLeft);
+            UiButton("Resume Button", "Resume Label", panel.transform, new Vector2(526f, -574f), new Vector2(410f, 44f), new Color(0.13f, 0.24f, 0.26f), "VOLVER A DISPARAR", 16, ink);
+            overlay.SetActive(false);
+        }
+        private static void UiButton(string name, string labelName, Transform parent, Vector2 position, Vector2 size, Color background, string label, int fontSize, Color textColor)
+        {
+            var buttonObject = UiImage(name, parent, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), position, size, background);
+            var button = buttonObject.AddComponent<Button>(); button.targetGraphic = buttonObject.GetComponent<Image>();
+            button.targetGraphic.raycastTarget = true;
+            var navigation = button.navigation; navigation.mode = Navigation.Mode.None; button.navigation = navigation;
+            var text = UiText(labelName, buttonObject.transform, label, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, fontSize, textColor, TextAnchor.MiddleCenter);
+            text.rectTransform.offsetMin = new Vector2(4f, 4f); text.rectTransform.offsetMax = new Vector2(-4f, -4f);
+        }
+        private static GameObject UiImage(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 position, Vector2 size, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>(); rect.anchorMin = anchorMin; rect.anchorMax = anchorMax; rect.pivot = pivot;
+            rect.anchoredPosition = position; rect.sizeDelta = size;
+            var image = go.GetComponent<Image>(); image.color = color; image.raycastTarget = false;
+            return go;
+        }
+        private static Text UiText(string name, Transform parent, string value, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 position, Vector2 size, int fontSize, Color color, TextAnchor alignment)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>(); rect.anchorMin = anchorMin; rect.anchorMax = anchorMax; rect.pivot = pivot;
+            rect.anchoredPosition = position; rect.sizeDelta = size;
+            var text = go.GetComponent<Text>(); text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); text.text = value;
+            text.fontSize = fontSize; text.color = color; text.alignment = alignment; text.raycastTarget = false;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow; text.verticalOverflow = VerticalWrapMode.Overflow;
+            return text;
+        }
+        private static void EnsureFuelPickups()
+        {
+            if (Object.FindObjectsByType<FuelTankPickup>(FindObjectsSortMode.None).Length > 0) return;
+            CreateFuelPickups();
+        }
+        private static void CreateFuelPickups()
+        {
+            Material tank = Material("FuelTank", new Color(1f, 0.48f, 0.12f), true);
+            Material cap = Material("FuelTankCap", new Color(0.25f, 0.94f, 0.72f), true);
+            CreateFuelPickup("Fuel Tank 01", new Vector3(3f, 0.9f, 3.5f), tank, cap);
+            CreateFuelPickup("Fuel Tank 02", new Vector3(-6f, 0.9f, 11f), tank, cap);
+            CreateFuelPickup("Fuel Tank 03", new Vector3(4f, 0.9f, 19f), tank, cap);
+        }
+        private static void CreateFuelPickup(string name, Vector3 position, Material tankMaterial, Material capMaterial)
+        {
+            var pickup = new GameObject(name);
+            pickup.transform.position = position;
+            var trigger = pickup.AddComponent<SphereCollider>();
+            trigger.isTrigger = true; trigger.radius = 0.7f;
+            var body = pickup.AddComponent<Rigidbody>();
+            body.isKinematic = true; body.useGravity = false;
+            var fuel = pickup.AddComponent<FuelTankPickup>(); fuel.tanksGranted = 1;
+            var visuals = new GameObject("Visuals").transform;
+            visuals.SetParent(pickup.transform, false); fuel.visualRoot = visuals;
+            var canister = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            canister.name = "Canister"; canister.transform.SetParent(visuals, false);
+            canister.transform.localScale = new Vector3(0.38f, 0.38f, 0.38f);
+            canister.GetComponent<Renderer>().sharedMaterial = tankMaterial;
+            Object.DestroyImmediate(canister.GetComponent<Collider>());
+            var cap = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cap.name = "Fuel stripe"; cap.transform.SetParent(visuals, false);
+            cap.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            cap.transform.localScale = new Vector3(0.4f, 0.1f, 0.4f);
+            cap.GetComponent<Renderer>().sharedMaterial = capMaterial;
+            Object.DestroyImmediate(cap.GetComponent<Collider>());
         }
         private static Material Material(string name, Color color, bool unlit = false, string shaderName = null)
         {

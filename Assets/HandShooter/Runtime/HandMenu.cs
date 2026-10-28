@@ -9,108 +9,110 @@ namespace HandShooter
     {
         public PrototypePlayer player;
         public HandWeapon weapon;
+        public Canvas canvas;
+        public Image fuelFill;
+        public RectTransform fuelFillRect;
+        public Text fuelLabel, tankLabel, debugText, controls, crosshair, hitText;
+        public GameObject debugPanel;
+        public bool showDebugStats;
         public GameObject MenuRoot { get; private set; }
-        private Text hudStats, menuStats, mode, palmText, hitText, controls, rules;
+        private Text menuStats, mode, palmText, rules;
         private readonly Button[] fingers = new Button[4];
         private readonly Text[] fingerText = new Text[4];
         private Button thumb;
         private Text thumbText;
-        private Font font;
         private readonly Color ink = new Color(0.9f, 0.95f, 0.97f);
         private readonly Color muted = new Color(0.53f, 0.64f, 0.69f);
         private readonly Color mint = new Color(0.27f, 0.93f, 0.75f);
         private readonly Color orange = new Color(1f, 0.59f, 0.31f);
         private Transform ui;
+        private void OnValidate()
+        {
+            if (debugPanel && !Application.isPlaying) debugPanel.SetActive(showDebugStats);
+        }
         private void Start()
         {
-            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var canvasObject = new GameObject("Prototype UI", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            canvasObject.transform.SetParent(transform, false);
-            var canvas = canvasObject.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10;
-            var scaler = canvasObject.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1366, 768);
-            scaler.matchWidthOrHeight = 0.5f;
+            if (!canvas) canvas = GetComponentInChildren<Canvas>();
+            if (!canvas)
+            {
+                Debug.LogError("HandMenu requires a Canvas assigned in the scene.", this);
+                enabled = false;
+                return;
+            }
             ui = canvas.transform;
             if (!EventSystem.current)
             {
                 var events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
-                events.transform.SetParent(transform, false);
                 events.GetComponent<InputSystemUIInputModule>().AssignDefaultActions();
             }
-            RectTransform top = Box(ui, "Range HUD", 26, 24, 320, 72, new Color(0.03f, 0.07f, 0.09f, 0.9f));
-            Label(top, "HAND / LAB", 16, 8, 290, 26, 20, mint);
-            Label(top, "CAMPO DE PRUEBAS     /     PROTOTIPO 01", 16, 36, 290, 24, 11, muted);
-            RectTransform bottom = Box(ui, "Weapon HUD", 26, -26, 460, 82, new Color(0.03f, 0.07f, 0.09f, 0.94f));
-            bottom.anchorMin = bottom.anchorMax = new Vector2(0, 0);
-            bottom.pivot = new Vector2(0, 1);
-            bottom.anchoredPosition = new Vector2(26, 108);
-            hudStats = Label(bottom, "", 16, 8, 430, 60, 17, ink);
-            controls = Label(ui, "", 26, -25, 800, 24, 13, muted);
-            var c = controls.rectTransform;
-            c.anchorMin = c.anchorMax = new Vector2(0, 0); c.anchoredPosition = new Vector2(26, 28);
-            var cross = Label(ui, "+", 0, 0, 32, 32, 25, mint);
-            cross.alignment = TextAnchor.MiddleCenter;
-            cross.rectTransform.anchorMin = cross.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            cross.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            cross.rectTransform.anchoredPosition = Vector2.zero;
-            hitText = Label(ui, "", 0, 0, 240, 45, 19, orange);
-            hitText.alignment = TextAnchor.MiddleCenter;
-            hitText.rectTransform.anchorMin = hitText.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            hitText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            hitText.rectTransform.anchoredPosition = new Vector2(0, -48);
+            if (!fuelFill || !fuelFillRect || !fuelLabel || !tankLabel || !debugPanel || !debugText)
+            {
+                Debug.LogError("Assign the fuel HUD and debug panel references on HandMenu in the Inspector.", this);
+                enabled = false;
+                return;
+            }
+            if (crosshair) crosshair.text = "+";
             BuildMenu();
         }
         private void BuildMenu()
         {
-            RectTransform overlay = Box(ui, "Hand menu", 0, 0, 0, 0, new Color(0.015f, 0.03f, 0.045f, 0.86f));
-            overlay.anchorMin = Vector2.zero; overlay.anchorMax = Vector2.one;
-            overlay.offsetMin = overlay.offsetMax = Vector2.zero;
-            MenuRoot = overlay.gameObject;
-            RectTransform panel = Box(overlay, "Panel", 0, 0, 980, 650, new Color(0.045f, 0.075f, 0.095f, 1));
-            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
-            panel.pivot = new Vector2(0.5f, 0.5f); panel.anchoredPosition = Vector2.zero;
-            Box(panel, "Accent", 0, 0, 980, 3, mint);
-            Label(panel, "CONFIGURAR MANO", 34, 28, 700, 42, 32, ink);
-            Label(panel, "Juntá los dedos para ganar potencia. Liberalos para disparar más rápido.", 36, 78, 900, 30, 17, muted);
-            Label(panel, "01 / DEDOS PRINCIPALES", 36, 135, 420, 30, 15, mint);
-            Label(panel, "02 / RESULTADO", 526, 135, 400, 30, 15, mint);
-            string[] names = { "ÍNDICE", "MEDIO", "ANULAR", "MEÑIQUE" };
-            float[] heights = { 158, 188, 170, 128 };
-            for (int i = 0; i < 4; i++)
+            Transform root = canvas.transform.Find("Hand Menu Overlay");
+            if (!root)
             {
-                int index = i;
-                fingers[i] = MakeButton(panel, names[i], 72 + i * 92, 372 - heights[i], 82, heights[i], () => weapon.Hand.TryToggle(index));
-                fingerText[i] = fingers[i].GetComponentInChildren<Text>();
-                fingerText[i].fontSize = 12;
-                fingerText[i].alignment = TextAnchor.MiddleCenter;
+                Debug.LogError("Canvas is missing the Hand Menu Overlay scene object.", this);
+                enabled = false;
+                return;
             }
-            RectTransform palm = Box(panel, "Palm", 66, 380, 374, 86, new Color(0.09f, 0.16f, 0.18f));
-            palmText = Label(palm, "", 20, 12, 340, 62, 19, ink);
-            thumb = MakeButton(panel, "Pulgar", 66, 482, 374, 72, () => weapon.Hand.ThumbActive = !weapon.Hand.ThumbActive);
-            thumbText = thumb.GetComponentInChildren<Text>();
-            thumbText.fontSize = 17;
-            mode = Label(panel, "", 526, 184, 410, 40, 26, ink);
-            menuStats = Label(panel, "", 526, 240, 410, 150, 20, ink);
-            Label(panel, "REGLAS DE LA MANO", 526, 405, 410, 25, 13, mint);
-            rules = Label(panel, "", 526, 441, 415, 102, 15, muted);
-            Label(panel, "Los botones atenuados romperían el grupo activo.", 36, 574, 460, 42, 13, muted);
-            MakeButton(panel, "VOLVER A DISPARAR", 526, 574, 410, 44, () => player.SetMenuOpen(false));
+            MenuRoot = root.gameObject;
+            for (int i = 0; i < fingers.Length; i++)
+            {
+                Transform buttonObject = root.Find($"Hand Menu Panel/Finger Button {i + 1}");
+                if (!buttonObject) { Debug.LogError($"Canvas is missing Finger Button {i + 1}.", this); enabled = false; return; }
+                fingers[i] = buttonObject.GetComponent<Button>();
+                fingerText[i] = buttonObject.GetComponentInChildren<Text>();
+                int index = i;
+                fingers[i].onClick.AddListener(() => weapon.Hand.TryToggle(index));
+            }
+            palmText = root.Find("Hand Menu Panel/Palm/Palm Label")?.GetComponent<Text>();
+            thumb = root.Find("Hand Menu Panel/Thumb Button")?.GetComponent<Button>();
+            thumbText = root.Find("Hand Menu Panel/Thumb Button/Thumb Label")?.GetComponent<Text>();
+            mode = root.Find("Hand Menu Panel/Menu Mode")?.GetComponent<Text>();
+            menuStats = root.Find("Hand Menu Panel/Menu Stats")?.GetComponent<Text>();
+            rules = root.Find("Hand Menu Panel/Rules Text")?.GetComponent<Text>();
+            Button resume = root.Find("Hand Menu Panel/Resume Button")?.GetComponent<Button>();
+            if (!palmText || !thumb || !thumbText || !mode || !menuStats || !rules || !resume)
+            {
+                Debug.LogError("Canvas is missing one or more Hand Menu scene references.", this);
+                enabled = false;
+                return;
+            }
+            // Button graphics were authored with raycastTarget disabled, so the
+            // EventSystem could not hit them even though the Buttons were enabled.
+            foreach (Button button in root.GetComponentsInChildren<Button>(true))
+                if (button.targetGraphic is Graphic graphic) graphic.raycastTarget = true;
+            thumb.onClick.AddListener(() => weapon.Hand.ThumbActive = !weapon.Hand.ThumbActive);
+            resume.onClick.AddListener(() => player.SetMenuOpen(false));
         }
         private void LateUpdate()
         {
             if (!MenuRoot || weapon.Hand == null) return;
             MenuRoot.SetActive(player.IsMenuOpen);
+            if (debugPanel.activeSelf != showDebugStats) debugPanel.SetActive(showDebugStats);
             var stats = weapon.Stats;
             var hand = weapon.Hand;
             var blast = weapon.settings.EvaluateExplosion(stats.Damage);
             Color accent = stats.Hitscan ? mint : orange;
-            hudStats.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}   /   {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}     ESPERA {stats.Interval:0.##} s";
-            if (!stats.Hitscan) hudStats.text += $"\nÁREA {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
-            controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey}  MOVER     MOUSE  APUNTAR     CLIC  DISPARAR     {player.settings.menuKey}  MANO";
-            hitText.text = Time.time - weapon.LastHitTime < 0.5f ? $"IMPACTO  -{weapon.LastHitDamage:0.##}" : "";
+            float fuelFraction = Mathf.Clamp01(weapon.FuelFraction);
+            fuelFillRect.anchorMin = Vector2.zero;
+            fuelFillRect.anchorMax = new Vector2(fuelFraction, 1f);
+            fuelFillRect.offsetMin = fuelFillRect.offsetMax = Vector2.zero;
+            fuelFill.color = fuelFraction <= 0.25f ? orange : mint;
+            fuelLabel.text = "COMBUSTIBLE";
+            tankLabel.text = $"{weapon.Fuel:0}/{weapon.tankCapacity:0}   ·   TANQUES ×{weapon.SpareTankCount}";
+            if (controls) controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey}  MOVER     MOUSE  APUNTAR     CLIC  DISPARAR     R  RECARGAR     {player.settings.menuKey}  MANO";
+            debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {stats.Damage * weapon.fuelPerDamage:0.##} COMBUSTIBLE / DISPARO";
+            if (!stats.Hitscan) debugText.text += $"\nÁREA {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
+            if (hitText) hitText.text = Time.time - weapon.LastHitTime < 0.5f ? $"IMPACTO  -{weapon.LastHitDamage:0.##}" : "";
             if (!player.IsMenuOpen) return;
             mode.text = stats.Hitscan ? "RAYCAST / INSTANTÁNEO" : "PROYECTIL / EXPLOSIVO";
             mode.color = accent;
@@ -130,31 +132,7 @@ namespace HandShooter
             thumbText.color = new Color(0.025f, 0.07f, 0.08f);
             thumbText.text = $"PULGAR {(hand.ThumbActive ? "ACTIVO" : "INACTIVO")}\n{(hand.ThumbActive ? "Raycast · daño y espera base" : $"Proyectil · daño ×{weapon.settings.projectileDamageMultiplier:0.##} / espera ×{weapon.settings.projectileCooldownMultiplier:0.##}")}";
         }
-        private RectTransform Rect(Transform parent, string name, float x, float y, float width, float height)
-        {
-            var rect = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
-            rect.SetParent(parent, false); rect.anchorMin = rect.anchorMax = new Vector2(0, 1);
-            rect.pivot = new Vector2(0, 1); rect.anchoredPosition = new Vector2(x, -y); rect.sizeDelta = new Vector2(width, height);
-            return rect;
-        }
-        private RectTransform Box(Transform parent, string name, float x, float y, float w, float h, Color color)
-        { var rect = Rect(parent, name, x, y, w, h); var image = rect.gameObject.AddComponent<Image>(); image.color = color; return rect; }
-        private Text Label(Transform parent, string text, float x, float y, float w, float h, int size, Color color)
-        {
-            var label = Rect(parent, "Label", x, y, w, h).gameObject.AddComponent<Text>();
-            label.font = font; label.text = text; label.fontSize = size; label.color = color;
-            label.raycastTarget = false; label.horizontalOverflow = HorizontalWrapMode.Wrap; label.verticalOverflow = VerticalWrapMode.Truncate;
-            return label;
-        }
-        private Button MakeButton(Transform parent, string text, float x, float y, float w, float h, UnityEngine.Events.UnityAction action)
-        {
-            var rect = Box(parent, text, x, y, w, h, new Color(0.13f, 0.24f, 0.26f));
-            var button = rect.gameObject.AddComponent<Button>(); button.targetGraphic = rect.GetComponent<Image>();
-            var colors = button.colors; colors.highlightedColor = new Color(0.8f, 1f, 0.95f); colors.disabledColor = new Color(0.65f, 0.65f, 0.65f); button.colors = colors;
-            var navigation = button.navigation; navigation.mode = Navigation.Mode.None; button.navigation = navigation;
-            var label = Label(rect, text, 4, 4, w - 8, h - 8, 16, ink); label.alignment = TextAnchor.MiddleCenter;
-            button.onClick.AddListener(action); return button;
-        }
+
     }
 }
 

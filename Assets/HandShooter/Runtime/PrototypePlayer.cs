@@ -15,7 +15,7 @@ namespace HandShooter
         private float pitch, verticalVelocity;
         private float previousTimeScale = 1f;
         private void Awake() { controller = GetComponent<CharacterController>(); }
-        private void Start() { SetMenuOpen(false); }
+        private void Start() { SetMenuOpen(false); FuelTankPickup.SpawnDefaultPickups(transform); }
         private void Update()
         {
             if (!settings || !viewCamera) return;
