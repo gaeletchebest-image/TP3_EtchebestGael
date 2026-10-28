@@ -168,6 +168,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.DamageTarget
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
+  kamikazeSettings: {fileID: 0}
   label: {fileID: 304497275}
 --- !u!23 &17299651
 MeshRenderer:
@@ -6514,6 +6515,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.DamageTarget
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
+  kamikazeSettings: {fileID: 0}
   label: {fileID: 439656649}
 --- !u!23 &1300085623
 MeshRenderer:
@@ -8130,6 +8132,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.DamageTarget
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
+  kamikazeSettings: {fileID: 0}
   label: {fileID: 674061454}
 --- !u!23 &1611372261
 MeshRenderer:
@@ -9861,6 +9864,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.DamageTarget
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
+  kamikazeSettings: {fileID: 0}
   label: {fileID: 1516934004}
 --- !u!23 &1947019968
 MeshRenderer:
@@ -10158,6 +10162,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.DamageTarget
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
+  kamikazeSettings: {fileID: 0}
   label: {fileID: 588201021}
 --- !u!23 &2014275100
 MeshRenderer:
@@ -11180,6 +11185,63 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 49b204a94f52d6c44bb3c543932dd630, type: 3}
+--- !u!1001 &4649854771668542298
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 165657618624421186, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_Name
+      value: Enemy Kamikaze
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -11190,3 +11252,4 @@ SceneRoots:
   - {fileID: 890253519}
   - {fileID: 846231391}
   - {fileID: 3247209993318706059}
+  - {fileID: 4649854771668542298}

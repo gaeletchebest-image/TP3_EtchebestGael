@@ -13,6 +13,7 @@ namespace HandShooter.Editor
         public const string ScenePath = "Assets/Scenes/HandShooterPrototype.unity";
         public const string SettingsPath = "Assets/HandShooter/Settings/ShooterSettings.asset";
         public const string TurretPrefabPath = "Assets/HandShooter/Prefabs/EnemyTurret.prefab";
+        public const string KamikazePrefabPath = "Assets/HandShooter/Prefabs/EnemyKamikaze.prefab";
 
         [InitializeOnLoadMethod]
         private static void EnsureSceneObjectsOnEditorLoad()
@@ -21,6 +22,7 @@ namespace HandShooter.Editor
             {
                 if (EditorApplication.isPlayingOrWillChangePlaymode || SceneManager.GetActiveScene().path != ScenePath) return;
                 var scene = SceneManager.GetActiveScene();
+                EnsureKamikaze();
                 var player = Object.FindFirstObjectByType<PrototypePlayer>();
                 if (player && (!player.deathScreen || !player.deathHint)) EnsureDeathScreen();
                 var turret = Object.FindFirstObjectByType<TurretEnemy>();
@@ -28,6 +30,12 @@ namespace HandShooter.Editor
                 {
                     ConfigureTurretVisuals(turret);
                     ConvertTurretToPrefab(turret);
+                }
+                var kamikaze = Object.FindFirstObjectByType<KamikazeEnemy>();
+                if (kamikaze && !PrefabUtility.IsPartOfPrefabInstance(kamikaze.gameObject))
+                {
+                    ConfigureKamikazeVisuals(kamikaze);
+                    ConvertKamikazeToPrefab(kamikaze);
                 }
                 if (scene.isDirty) EditorSceneManager.SaveScene(scene);
             };
@@ -42,8 +50,10 @@ namespace HandShooter.Editor
                 var existingScene = EditorSceneManager.OpenScene(ScenePath);
                 EnsureFuelPickups();
                 EnsureTurret();
+                EnsureKamikaze();
                 EnsureDeathScreen();
                 ConvertTurretToPrefab();
+                ConvertKamikazeToPrefab();
                 EditorSceneManager.SaveScene(existingScene);
                 Selection.activeObject = AssetDatabase.LoadAssetAtPath<ShooterSettings>(SettingsPath);
                 return;
@@ -135,7 +145,9 @@ namespace HandShooter.Editor
             CreateSceneHud(menu);
             EnsureDeathScreen();
             EnsureTurret();
+            EnsureKamikaze();
             ConvertTurretToPrefab();
+            ConvertKamikazeToPrefab();
             EditorSceneManager.SaveScene(scene, ScenePath);
             var scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath).ToList();
             scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true)); EditorBuildSettings.scenes = scenes.ToArray();
@@ -265,6 +277,140 @@ namespace HandShooter.Editor
             health.label.transform.SetParent(body.transform, true);
             if (turret.settings)
                 health.label.text = $"{turret.settings.initialHealth:0.#} / {turret.settings.initialHealth:0.#}";
+            EditorUtility.SetDirty(health);
+            EditorSceneManager.MarkSceneDirty(body.scene);
+        }
+
+        [MenuItem("Hand Shooter/Add Kamikaze")]
+        public static void EnsureKamikaze()
+        {
+            var existing = Object.FindFirstObjectByType<KamikazeEnemy>();
+            if (existing) { ConfigureKamikazeVisuals(existing); return; }
+
+            const string settingsPath = "Assets/HandShooter/Settings/KamikazeSettings.asset";
+            var settings = AssetDatabase.LoadAssetAtPath<KamikazeSettings>(settingsPath);
+            if (!settings)
+            {
+                settings = ScriptableObject.CreateInstance<KamikazeSettings>();
+                AssetDatabase.CreateAsset(settings, settingsPath);
+            }
+            if (!settings.explosionMaterial)
+            {
+                settings.explosionMaterial = Material("Beam", Color.white, true, "Universal Render Pipeline/Particles/Unlit");
+                EditorUtility.SetDirty(settings);
+            }
+
+            var body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            body.name = "Enemy Kamikaze";
+            body.transform.position = new Vector3(5f, 0.75f, 18f);
+            body.transform.localScale = Vector3.one * 1.2f;
+            body.GetComponent<Renderer>().sharedMaterial = Material("Kamikaze", new Color(0.95f, 0.24f, 0.06f), true);
+            var health = body.AddComponent<DamageTarget>();
+            health.kamikazeSettings = settings;
+            var kamikaze = body.AddComponent<KamikazeEnemy>();
+            kamikaze.settings = settings;
+            ConfigureKamikazeVisuals(kamikaze);
+            EditorSceneManager.MarkSceneDirty(body.scene);
+        }
+
+        [MenuItem("Hand Shooter/Convert Kamikaze to Prefab")]
+        public static void ConvertKamikazeToPrefab()
+        {
+            var kamikaze = Object.FindFirstObjectByType<KamikazeEnemy>();
+            if (!kamikaze)
+            {
+                Debug.LogWarning("No Enemy Kamikaze exists in the active scene.");
+                return;
+            }
+            ConvertKamikazeToPrefab(kamikaze);
+        }
+
+        [MenuItem("Hand Shooter/Update Kamikaze Prefab")]
+        public static void UpdateKamikazePrefab()
+        {
+            var root = PrefabUtility.LoadPrefabContents(KamikazePrefabPath);
+            if (!root)
+            {
+                Debug.LogError("Could not load the Enemy Kamikaze prefab at " + KamikazePrefabPath);
+                return;
+            }
+
+            var kamikaze = root.GetComponent<KamikazeEnemy>();
+            if (!kamikaze)
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+                Debug.LogError("The Enemy Kamikaze prefab has no KamikazeEnemy component.");
+                return;
+            }
+
+            ConfigureKamikazeVisuals(kamikaze);
+            PrefabUtility.SaveAsPrefabAsset(root, KamikazePrefabPath, out bool success);
+            PrefabUtility.UnloadPrefabContents(root);
+            if (success) AssetDatabase.SaveAssets();
+        }
+
+        private static void ConvertKamikazeToPrefab(KamikazeEnemy kamikaze)
+        {
+            if (PrefabUtility.IsPartOfPrefabInstance(kamikaze.gameObject)) return;
+            PrefabUtility.SaveAsPrefabAssetAndConnect(kamikaze.gameObject, KamikazePrefabPath,
+                InteractionMode.AutomatedAction, out bool success);
+            if (!success)
+            {
+                Debug.LogError("Could not save the Enemy Kamikaze prefab at " + KamikazePrefabPath, kamikaze);
+                return;
+            }
+            EditorSceneManager.MarkSceneDirty(kamikaze.gameObject.scene);
+            Debug.Log("Enemy Kamikaze saved and connected as a prefab: " + KamikazePrefabPath, kamikaze);
+        }
+
+        private static void ConfigureKamikazeVisuals(KamikazeEnemy kamikaze)
+        {
+            var body = kamikaze.gameObject;
+            body.transform.localScale = Vector3.one * 1.2f;
+            var shell = Material("Kamikaze", new Color(0.95f, 0.24f, 0.06f), true);
+            shell.SetColor("_BaseColor", new Color(0.95f, 0.24f, 0.06f));
+            EditorUtility.SetDirty(shell);
+            body.GetComponent<Renderer>().sharedMaterial = shell;
+
+            Transform directionMarker = body.transform.Find("Direction marker");
+            if (!directionMarker)
+            {
+                var marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                marker.name = "Direction marker";
+                marker.transform.SetParent(body.transform, false);
+                marker.transform.localPosition = new Vector3(0f, 0.08f, 0.72f);
+                marker.transform.localScale = new Vector3(0.35f, 0.3f, 0.75f);
+                Object.DestroyImmediate(marker.GetComponent<Collider>());
+                marker.layer = 2;
+                directionMarker = marker.transform;
+            }
+            directionMarker.GetComponent<Renderer>().sharedMaterial = Material("KamikazeDirection", new Color(0.48f, 0.48f, 0.48f));
+
+            var bandMaterial = Material("KamikazeBand", new Color(0.16f, 0.08f, 0.06f));
+            Transform band = body.transform.Find("Warning band");
+            if (!band)
+            {
+                var bandObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                bandObject.name = "Warning band";
+                bandObject.transform.SetParent(body.transform, false);
+                bandObject.transform.localPosition = Vector3.zero;
+                bandObject.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                bandObject.transform.localScale = new Vector3(0.62f, 0.22f, 0.62f);
+                Object.DestroyImmediate(bandObject.GetComponent<Collider>());
+                bandObject.layer = 2;
+                band = bandObject.transform;
+            }
+            band.GetComponent<Renderer>().sharedMaterial = bandMaterial;
+
+            var health = body.GetComponent<DamageTarget>();
+            health.kamikazeSettings = kamikaze.settings;
+            if (!health.label)
+                health.label = WorldText("", body.transform.position + Vector3.up * 0.95f,
+                    0.035f, Color.white, null);
+            health.label.name = "Kamikaze Health";
+            health.label.transform.SetParent(body.transform, true);
+            if (kamikaze.settings)
+                health.label.text = $"{kamikaze.settings.initialHealth:0.#} / {kamikaze.settings.initialHealth:0.#}";
             EditorUtility.SetDirty(health);
             EditorSceneManager.MarkSceneDirty(body.scene);
         }

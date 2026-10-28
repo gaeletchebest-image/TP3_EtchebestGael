@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83d8b709657f4d739d9ab04d1b7930fc, type: 3}
+  m_Name: KamikazeSettings
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.KamikazeSettings
+  initialHealth: 18
+  detectionRange: 18
+  moveSpeed: 8
+  detonationRange: 1.8
+  blastRadius: 4
+  blastDamage: 32
+  explosionVisualDuration: 0.45
+  explosionColor: {r: 1, g: 0.28, b: 0.06, a: 1}
+  explosionMaterial: {fileID: 2100000, guid: cd83be34633e3054f9ae124789dd04f4, type: 2}
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 51

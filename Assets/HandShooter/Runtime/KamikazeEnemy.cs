@@ -1,0 +1,124 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace HandShooter
+{
+    [RequireComponent(typeof(DamageTarget))]
+    public sealed class KamikazeEnemy : MonoBehaviour
+    {
+        public KamikazeSettings settings;
+        public PrototypePlayer target;
+
+        private DamageTarget damageTarget;
+        private bool hasAcquiredTarget;
+        private bool hasDetonated;
+
+        private void Awake()
+        {
+            damageTarget = GetComponent<DamageTarget>();
+        }
+
+        private void Start()
+        {
+            if (!target) target = FindFirstObjectByType<PrototypePlayer>();
+        }
+
+        private void Update()
+        {
+            if (!settings || !target || hasDetonated || damageTarget.Health <= 0f) return;
+
+            Vector3 toTarget = target.transform.position - transform.position;
+            toTarget.y = 0f;
+            float distance = toTarget.magnitude;
+            if (!hasAcquiredTarget)
+            {
+                if (distance > settings.detectionRange || !CanSeeTarget(distance)) return;
+                hasAcquiredTarget = true;
+            }
+
+            if (distance <= settings.detonationRange)
+            {
+                Detonate();
+                return;
+            }
+
+            Vector3 direction = toTarget / distance;
+            transform.position += direction * Mathf.Max(0f, settings.moveSpeed) * Time.deltaTime;
+            if (direction.sqrMagnitude > 0f)
+                transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+        }
+
+        private bool CanSeeTarget(float distance)
+        {
+            if (distance <= 0.001f) return true;
+            Vector3 origin = transform.position + Vector3.up * 0.2f;
+            Vector3 destination = target.transform.position + Vector3.up * 0.8f;
+            Vector3 direction = destination - origin;
+            float sightDistance = direction.magnitude;
+            int mask = settings.hitMask.value | (1 << 2);
+            return Physics.Raycast(origin, direction / sightDistance, out RaycastHit hit, sightDistance, mask,
+                QueryTriggerInteraction.Ignore) && hit.collider.GetComponentInParent<PrototypePlayer>() == target;
+        }
+
+        public void Detonate()
+        {
+            if (hasDetonated || !settings || !damageTarget || damageTarget.Health <= 0f) return;
+            hasDetonated = true;
+
+            Vector3 origin = transform.position;
+            float radius = Mathf.Max(0f, settings.blastRadius);
+            int mask = settings.hitMask.value | (1 << 2);
+            var damagedTargets = new HashSet<DamageTarget>();
+            var players = new HashSet<PrototypePlayer>();
+
+            if (radius > 0f)
+            {
+                foreach (var candidate in Physics.OverlapSphere(origin, radius, mask, QueryTriggerInteraction.Ignore))
+                {
+                    var player = candidate.GetComponentInParent<PrototypePlayer>();
+                    var damageable = candidate.GetComponentInParent<DamageTarget>();
+                    if (player && !players.Contains(player) && HasLineOfSight(origin, candidate, mask))
+                        players.Add(player);
+                    else if (damageable && damageable != damageTarget && !damagedTargets.Contains(damageable) &&
+                        HasLineOfSight(origin, candidate, mask))
+                        damagedTargets.Add(damageable);
+                }
+            }
+
+            ExplosionEffect.Spawn(origin, radius, settings.explosionVisualDuration,
+                settings.explosionMaterial, settings.explosionColor);
+            foreach (var player in players) player.Die();
+            foreach (var damageable in damagedTargets) damageable.TakeDamage(settings.blastDamage);
+
+            damageTarget.enabled = false;
+            Destroy(gameObject);
+        }
+
+        private static bool HasLineOfSight(Vector3 origin, Collider targetCollider, int mask)
+        {
+            Vector3 closestPoint = targetCollider.ClosestPoint(origin);
+            Vector3 offset = closestPoint - origin;
+            float distance = offset.magnitude;
+            if (distance <= 0.001f) return true;
+
+            foreach (var hit in Physics.RaycastAll(origin, offset / distance, distance, mask, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.collider == targetCollider || hit.collider.GetComponentInParent<DamageTarget>() ||
+                    hit.collider.GetComponentInParent<PrototypePlayer>()) continue;
+                return false;
+            }
+            return true;
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!settings) return;
+            Gizmos.color = new Color(1f, 0.3f, 0.08f, 1f);
+            Gizmos.DrawWireSphere(transform.position, Mathf.Max(0f, settings.detectionRange));
+            Gizmos.color = new Color(1f, 0.75f, 0.1f, 1f);
+            Gizmos.DrawWireSphere(transform.position, Mathf.Max(0f, settings.blastRadius));
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(transform.position, Mathf.Max(0f, settings.detonationRange));
+        }
+    }
+}
