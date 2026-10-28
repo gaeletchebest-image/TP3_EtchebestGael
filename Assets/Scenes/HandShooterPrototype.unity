@@ -169,6 +169,7 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
   kamikazeSettings: {fileID: 0}
+  sniperSettings: {fileID: 0}
   label: {fileID: 304497275}
 --- !u!23 &17299651
 MeshRenderer:
@@ -4556,6 +4557,63 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!1001 &871298137
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -9
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.00000004371139
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7309655941401470427, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8767789146275577996, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_Name
+      value: Enemy Sniper
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
 --- !u!1 &890253517
 GameObject:
   m_ObjectHideFlags: 0
@@ -6516,6 +6574,7 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
   kamikazeSettings: {fileID: 0}
+  sniperSettings: {fileID: 0}
   label: {fileID: 439656649}
 --- !u!23 &1300085623
 MeshRenderer:
@@ -8133,6 +8192,7 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
   kamikazeSettings: {fileID: 0}
+  sniperSettings: {fileID: 0}
   label: {fileID: 674061454}
 --- !u!23 &1611372261
 MeshRenderer:
@@ -9865,6 +9925,7 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
   kamikazeSettings: {fileID: 0}
+  sniperSettings: {fileID: 0}
   label: {fileID: 1516934004}
 --- !u!23 &1947019968
 MeshRenderer:
@@ -10163,6 +10224,7 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: d9651a2ea2bf76545a2fd4ffa634a4ca, type: 2}
   turretSettings: {fileID: 0}
   kamikazeSettings: {fileID: 0}
+  sniperSettings: {fileID: 0}
   label: {fileID: 588201021}
 --- !u!23 &2014275100
 MeshRenderer:
@@ -11253,3 +11315,4 @@ SceneRoots:
   - {fileID: 846231391}
   - {fileID: 3247209993318706059}
   - {fileID: 4649854771668542298}
+  - {fileID: 871298137}

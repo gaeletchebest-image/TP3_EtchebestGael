@@ -53,12 +53,12 @@ namespace HandShooter.Tests
             Assert.That(menu.MenuRoot.activeSelf, Is.True);
             Assert.That(Time.timeScale, Is.Zero);
             Assert.That(weapon.TryFire(), Is.False);
-            var middle = menu.MenuRoot.transform.Find("Panel/MEDIO").GetComponent<Button>();
+            var middle = menu.MenuRoot.transform.Find("Hand Menu Panel/Finger Button 2").GetComponent<Button>();
             Assert.That(middle.interactable, Is.True);
             middle.onClick.Invoke();
             Assert.That(weapon.Hand.ActiveCount, Is.EqualTo(2));
             yield return null;
-            var index = menu.MenuRoot.transform.Find("Panel/ÍNDICE").GetComponent<Button>();
+            var index = menu.MenuRoot.transform.Find("Hand Menu Panel/Finger Button 1").GetComponent<Button>();
             index.onClick.Invoke();
             Assert.That(weapon.Hand.ActiveMask, Is.EqualTo(2));
             player.SetMenuOpen(false);

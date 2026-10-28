@@ -7,7 +7,8 @@ namespace HandShooter
         public ShooterSettings settings;
         public TurretSettings turretSettings;
         public KamikazeSettings kamikazeSettings;
-        private float InitialHealth => kamikazeSettings ? kamikazeSettings.initialHealth :
+        public SniperSettings sniperSettings;
+        private float InitialHealth => sniperSettings ? sniperSettings.initialHealth : kamikazeSettings ? kamikazeSettings.initialHealth :
             turretSettings ? turretSettings.initialHealth : settings.targetHealth;
         public TextMesh label;
         public float Health { get; private set; }
@@ -35,7 +36,7 @@ namespace HandShooter
             if (Health <= 0)
             {
                 DestroyedCount++;
-                if (turretSettings || kamikazeSettings) { body.enabled = hitCollider.enabled = false; Destroy(gameObject); return true; }
+                if (turretSettings || kamikazeSettings || sniperSettings) { body.enabled = hitCollider.enabled = false; Destroy(gameObject); return true; }
                 respawnAt = Time.time + settings.targetRespawnDelay;
                 body.enabled = hitCollider.enabled = false;
             }

@@ -23,6 +23,7 @@ namespace HandShooter.Editor
                 if (EditorApplication.isPlayingOrWillChangePlaymode || SceneManager.GetActiveScene().path != ScenePath) return;
                 var scene = SceneManager.GetActiveScene();
                 EnsureKamikaze();
+                SniperSetup.EnsureSniper();
                 var player = Object.FindFirstObjectByType<PrototypePlayer>();
                 if (player && (!player.deathScreen || !player.deathHint)) EnsureDeathScreen();
                 var turret = Object.FindFirstObjectByType<TurretEnemy>();
@@ -51,6 +52,7 @@ namespace HandShooter.Editor
                 EnsureFuelPickups();
                 EnsureTurret();
                 EnsureKamikaze();
+                SniperSetup.EnsureSniper();
                 EnsureDeathScreen();
                 ConvertTurretToPrefab();
                 ConvertKamikazeToPrefab();
@@ -146,6 +148,7 @@ namespace HandShooter.Editor
             EnsureDeathScreen();
             EnsureTurret();
             EnsureKamikaze();
+            SniperSetup.EnsureSniper();
             ConvertTurretToPrefab();
             ConvertKamikazeToPrefab();
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -176,10 +179,12 @@ namespace HandShooter.Editor
                 UiText("Death Title", overlay.transform, "ELIMINADO", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                     new Vector2(0.5f, 0.5f), new Vector2(0f, 36f), new Vector2(760f, 100f), 64,
                     new Color(0.96f, 0.97f, 0.98f), TextAnchor.MiddleCenter);
-                UiText("Death Subtitle", overlay.transform, "Un impacto de la torreta terminó la partida.", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                UiText("Death Subtitle", overlay.transform, "Un enemigo terminó la partida.", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                     new Vector2(0.5f, 0.5f), new Vector2(0f, -35f), new Vector2(680f, 36f), 20,
                     new Color(0.67f, 0.73f, 0.77f), TextAnchor.MiddleCenter);
             }
+            var subtitle = overlay.transform.Find("Death Subtitle")?.GetComponent<Text>();
+            if (subtitle) subtitle.text = "Un enemigo terminó la partida.";
             var hint = overlay.transform.Find("Death Hint")?.GetComponent<Text>();
             if (!hint)
                 hint = UiText("Death Hint", overlay.transform, "APRETÁ CUALQUIER TECLA PARA VOLVER A INTENTAR",

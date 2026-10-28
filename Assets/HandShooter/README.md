@@ -37,7 +37,7 @@ También se editan multiplicadores del pulgar, velocidad/radio/vida del proyecti
 
 `Tests/PlayMode`: daño raycast, espera, viaje/impacto del proyectil, barrido contra paredes finas, menú y regeneración.
 
-La mano usa geometría simple de prototipo. No se incluyen enemigos con IA, salto ni animaciones finales.
+La mano y los enemigos usan geometría simple de prototipo. Hay torreta, kamikaze y sniper; no se incluyen salto ni animaciones finales.
 
 ## Explosión del pulgar inactivo
 
@@ -62,3 +62,17 @@ Radio = `min(explosionMaxRadius, explosionBaseRadius × (daño directo / explosi
 | 4 | 16 | 8 | 3.54 m |
 
 El HUD y el menú muestran daño de área y radio efectivos. Dos blancos pequeños flanquean al blanco central para comparar el alcance del área al concentrar más dedos. Los proyectiles conservan los valores del momento del disparo aunque después cambies la mano o el asset.
+
+## Enemigo sniper
+
+`Prefabs/EnemySniper.prefab` está colocado en la escena del prototipo. También se puede agregar desde `Hand Shooter > Add Sniper`. Su balance está en `Settings/SniperSettings.asset` y se lee en vivo:
+
+- Se mueve a **2 m/s**, más lento que el kamikaze. Detecta al jugador a **26 m** y, una vez adquirido, sigue persiguiéndolo aunque se aleje o se oculte.
+- Puede preparar el ataque entre **7 y 19 m** de distancia horizontal e intenta colocarse a **13 m**, el centro del rango. Retrocede si el jugador se acerca demasiado.
+- Al llegar se queda inmóvil **0.4 s** para colocarse y carga durante **1.8 s**. Una línea muestra la trayectoria, un anillo se completa y el foco del cañón crece. El texto muestra el porcentaje de carga.
+- Durante los últimos **0.35 s** fija la dirección: la línea se vuelve amarilla y aparece **¡FIJADO!**. El jugador puede esquivar lateralmente. Después dispara un **rayo instantáneo**, sin proyectil, y espera **1.8 s** antes de preparar otro ataque. Un impacto mata al jugador, como los otros enemigos.
+- Apunta al centro del cuerpo del jugador y calcula la trayectoria desde la posición del cañón después de girar. El punto de impacto no depende de la ubicación de la cámara.
+- Salir del rango o interponer cobertura cancela la carga completa. El sniper busca otra posición navegable con línea de tiro y vuelve a colocarse y cargar desde cero. Las paredes y los blancos interceptan el rayo.
+- La navegación se genera una vez al entrar en Play a partir de los colliders de cada escena; no requiere horneado manual. Reutiliza ese mapa entre snipers y lo libera al descargar la escena. Si se cambia la geometría durante Play, el mapa de navegación se actualiza al volver a entrar en Play; la detección de cobertura sí es inmediata.
+
+`Tests/PlayMode/SniperPlayTests.cs` verifica carga visible, impacto instantáneo, esquiva de la dirección fijada, espera entre disparos, ambos límites de rango, cancelación por cobertura, reposicionamiento alrededor de paredes, acercamiento/retirada, pausa y muerte.
