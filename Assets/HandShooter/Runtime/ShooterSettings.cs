@@ -17,6 +17,8 @@ namespace HandShooter
         [Tooltip("Descuento de combustible del proyectil respecto al rayo. 0.5 = consume 50 % menos para el mismo daño base.")]
         [Range(0f, 1f)] public float projectileFuelEfficiency = 0.5f;
         [Min(0.1f)] public float projectileSpeed = 12f;
+        [Tooltip("Cuánto se reduce la velocidad por daño extra. 0 = sin reducción; 0.5 = la velocidad escala con la raíz inversa del daño relativo al daño base.")]
+        [Min(0f)] public float projectileSpeedDamageExponent = 0.5f;
         [Min(0.01f)] public float projectileRadius = 0.09f;
         [Min(0.1f)] public float projectileLifetime = 8f;
         public HandProjectile projectilePrefab;
@@ -83,6 +85,12 @@ namespace HandShooter
                 costDamage *= 1f - Mathf.Clamp01(projectileFuelEfficiency);
             }
             return costDamage * Mathf.Max(0.01f, fuelPerDamage);
+        }
+        public float EvaluateProjectileSpeed(float shotDamage)
+        {
+            float damageRatio = Mathf.Max(1f, shotDamage / Mathf.Max(0.01f, baseDamage));
+            float slowdown = Mathf.Pow(damageRatio, Mathf.Max(0f, projectileSpeedDamageExponent));
+            return Mathf.Max(0.1f, projectileSpeed) / slowdown;
         }
         public ExplosionStats EvaluateExplosion(float directDamage)
         {

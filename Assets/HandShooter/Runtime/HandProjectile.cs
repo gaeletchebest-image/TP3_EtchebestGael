@@ -19,7 +19,7 @@ namespace HandShooter
         {
             direction = flightDirection.normalized;
             damage = shotDamage;
-            speed = Mathf.Max(0.1f, settings.projectileSpeed);
+            speed = settings.EvaluateProjectileSpeed(shotDamage);
             radius = Mathf.Max(0.01f, settings.projectileRadius);
             remainingLife = settings.projectileLifetime;
             remainingRange = settings.range;

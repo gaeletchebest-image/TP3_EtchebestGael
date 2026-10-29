@@ -23,6 +23,7 @@ MonoBehaviour:
   projectileCooldownMultiplier: 2
   projectileFuelEfficiency: 0.5
   projectileSpeed: 10
+  projectileSpeedDamageExponent: 0.5
   projectileRadius: 0.09
   projectileLifetime: 8
   projectilePrefab: {fileID: 8072563373845372616, guid: d2c6a05da59ec19468aada5b6edf2992, type: 3}
