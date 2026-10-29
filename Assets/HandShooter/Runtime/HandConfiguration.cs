@@ -24,6 +24,13 @@ namespace HandShooter
             activeMask = ActiveMask ^ (1 << index);
             return true;
         }
+        public bool TryApply(int mask, bool thumb)
+        {
+            if (!IsValidMask(mask)) return false;
+            activeMask = mask;
+            thumbActive = thumb;
+            return true;
+        }
         public static bool IsValidMask(int mask)
         {
             if (mask < 1 || mask > 15) return false;

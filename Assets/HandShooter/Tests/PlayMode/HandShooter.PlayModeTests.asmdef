@@ -1,1 +1,1 @@
-{"name":"HandShooter.PlayModeTests","references":["HandShooter.Runtime","Unity.ugui"],"optionalUnityReferences":["TestAssemblies"]}
+{"name":"HandShooter.PlayModeTests","references":["HandShooter.Runtime","Unity.ugui","Unity.InputSystem","Unity.InputSystem.TestFramework"],"optionalUnityReferences":["TestAssemblies"]}

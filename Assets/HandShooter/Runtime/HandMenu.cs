@@ -17,7 +17,10 @@ namespace HandShooter
         public GameObject debugPanel;
         public bool showDebugStats;
         public GameObject MenuRoot { get; private set; }
-        private Text menuStats, mode, palmText, rules;
+        private Text menuStats, mode, palmText, rules, presetFeedback;
+        private readonly Button[] presetButtons = new Button[HandPresetStore.SlotCount];
+        private readonly Text[] presetLabels = new Text[HandPresetStore.SlotCount];
+        private float presetFeedbackUntil;
         private readonly Button[] fingers = new Button[4];
         private readonly Text[] fingerText = new Text[4];
         private Button thumb;
@@ -93,6 +96,31 @@ namespace HandShooter
                 if (button.targetGraphic is Graphic graphic) graphic.raycastTarget = true;
             thumb.onClick.AddListener(() => weapon.Hand.ThumbActive = !weapon.Hand.ThumbActive);
             resume.onClick.AddListener(() => player.SetMenuOpen(false));
+            presetFeedback = root.Find("Hand Menu Panel/Menu Footer")?.GetComponent<Text>();
+            for (int i = 0; i < HandPresetStore.SlotCount; i++)
+            {
+                int digit = (i + 1) % HandPresetStore.SlotCount;
+                Transform slot = root.Find($"Hand Menu Panel/Preset Button {digit}");
+                if (!slot)
+                {
+                    Debug.LogError($"Canvas is missing Preset Button {digit}.", this);
+                    enabled = false;
+                    return;
+                }
+                presetButtons[digit] = slot.GetComponent<Button>();
+                presetLabels[digit] = slot.GetComponentInChildren<Text>();
+                presetButtons[digit].onClick.AddListener(() => weapon.SavePreset(digit));
+            }
+            weapon.PresetSaved += ShowPresetSaved;
+        }
+        private void ShowPresetSaved(int digit)
+        {
+            if (presetFeedback) presetFeedback.text = $"GUARDADO EN [{digit}] · En partida, pulsá {digit} para activarlo.";
+            presetFeedbackUntil = Time.unscaledTime + 3f;
+        }
+        private void OnDestroy()
+        {
+            if (weapon) weapon.PresetSaved -= ShowPresetSaved;
         }
         private void LateUpdate()
         {
@@ -117,11 +145,26 @@ namespace HandShooter
             }
             fuelLabel.text = "COMBUSTIBLE";
             tankLabel.text = $"{weapon.Fuel:0}/{weapon.tankCapacity:0}   ·   TANQUES ×{weapon.SpareTankCount}";
-            if (controls) controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey}  MOVER     {player.settings.dashKey}  DASH     MOUSE  APUNTAR     CLIC  DISPARAR     R  RECARGAR     {player.settings.menuKey}  MANO";
+            if (controls) controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey} MOVER   {player.settings.dashKey} DASH   CLIC DISPARAR   R RECARGAR   1–9 / 0 CONFIG.   {player.settings.menuKey} MANO";
             debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.settings.EvaluateFuelCost(stats, weapon.fuelPerDamage):0.##} COMBUSTIBLE / DISPARO";
             if (!stats.Hitscan) debugText.text += $"\nÁREA {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
             if (hitText) hitText.text = Time.time - weapon.LastHitTime < 0.5f ? $"IMPACTO  -{weapon.LastHitDamage:0.##}" : "";
             if (!player.IsMenuOpen) return;
+            for (int digit = 0; digit < HandPresetStore.SlotCount; digit++)
+            {
+                HandPreset preset = weapon.Presets.Get(digit);
+                bool matches = preset.Matches(hand);
+                presetButtons[digit].image.color = matches ? mint : new Color(0.13f, 0.2f, 0.23f);
+                presetLabels[digit].color = matches ? new Color(0.02f, 0.09f, 0.08f) : ink;
+                string group = "";
+                for (int finger = 0; finger < 4; finger++)
+                    if ((preset.ActiveMask & (1 << finger)) != 0) group += (finger + 1).ToString();
+                presetLabels[digit].text = preset.IsSaved
+                    ? $"[{digit}]  {(matches ? "ACTUAL" : "GUARDADO")}\n{group} · {(preset.ThumbActive ? "RAYO" : "PROY.")}"
+                    : $"[{digit}]\nVACÍO";
+            }
+            if (presetFeedback && Time.unscaledTime >= presetFeedbackUntil)
+                presetFeedback.text = "Se conservan al reiniciar. En partida: 1–9 / 0 para cambiar.";
             mode.text = stats.Hitscan ? "RAYCAST / INSTANTÁNEO" : "PROYECTIL / EXPLOSIVO";
             mode.color = accent;
             rules.text = $"Siempre queda al menos un cañón activo.\nLos dedos activos forman un solo grupo.\nPulgar activo: raycast, valores base.\nProyectil: daño ×{weapon.settings.projectileDamageMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}, combustible −{weapon.settings.projectileFuelEfficiency:P0}.\nExplosión: {weapon.settings.explosionDamageFraction:P0} del daño directo.";

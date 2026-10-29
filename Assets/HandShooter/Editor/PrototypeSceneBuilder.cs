@@ -22,6 +22,7 @@ namespace HandShooter.Editor
             {
                 if (EditorApplication.isPlayingOrWillChangePlaymode || SceneManager.GetActiveScene().path != ScenePath) return;
                 var scene = SceneManager.GetActiveScene();
+                EnsureWeaponPresetMenu();
                 EnsureKamikaze();
                 SniperSetup.EnsureSniper();
                 HunterSetup.EnsureHunter();
@@ -50,6 +51,7 @@ namespace HandShooter.Editor
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath))
             {
                 var existingScene = EditorSceneManager.OpenScene(ScenePath);
+                EnsureWeaponPresetMenu();
                 EnsureFuelPickups();
                 EnsureTurret();
                 EnsureKamikaze();
@@ -471,7 +473,41 @@ namespace HandShooter.Editor
             UiText("Rules Text", panel.transform, "", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -441f), new Vector2(415f, 102f), 15, muted, TextAnchor.UpperLeft);
             UiText("Menu Footer", panel.transform, "Los botones atenuados romperían el grupo activo.", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -574f), new Vector2(460f, 42f), 13, muted, TextAnchor.UpperLeft);
             UiButton("Resume Button", "Resume Label", panel.transform, new Vector2(526f, -574f), new Vector2(410f, 44f), new Color(0.13f, 0.24f, 0.26f), "VOLVER A DISPARAR", 16, ink);
+            CreatePresetControls(panel.transform, ink, muted, mint);
             overlay.SetActive(false);
+        }
+        public static void EnsureWeaponPresetMenu()
+        {
+            var menu = Object.FindFirstObjectByType<HandMenu>();
+            if (!menu || !menu.canvas) return;
+            Transform panel = menu.canvas.transform.Find("Hand Menu Overlay/Hand Menu Panel");
+            if (!panel || panel.Find("Preset Section Label")) return;
+            CreatePresetControls(panel, new Color(0.9f, 0.95f, 0.97f),
+                new Color(0.53f, 0.64f, 0.69f), new Color(0.27f, 0.93f, 0.75f));
+            EditorSceneManager.MarkSceneDirty(menu.gameObject.scene);
+        }
+        private static void CreatePresetControls(Transform panel, Color ink, Color muted, Color mint)
+        {
+            panel.GetComponent<RectTransform>().sizeDelta = new Vector2(980f, 740f);
+            UiText("Preset Section Label", panel,
+                "03 / GUARDAR CONFIGURACIÓN · Clic o tecla 1–9 / 0 para guardar o reemplazar",
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(36f, -568f), new Vector2(900f, 24f), 14, mint, TextAnchor.UpperLeft);
+            for (int i = 0; i < HandPresetStore.SlotCount; i++)
+            {
+                int digit = (i + 1) % HandPresetStore.SlotCount;
+                UiButton($"Preset Button {digit}", $"Preset Label {digit}", panel,
+                    new Vector2(36f + i * 90f, -602f), new Vector2(84f, 52f),
+                    new Color(0.13f, 0.2f, 0.23f), $"[{digit}]\nVACÍO", 11, ink);
+            }
+            Text footer = panel.Find("Menu Footer").GetComponent<Text>();
+            footer.rectTransform.anchoredPosition = new Vector2(36f, -672f);
+            footer.rectTransform.sizeDelta = new Vector2(460f, 42f);
+            footer.fontSize = 12;
+            footer.color = muted;
+            footer.horizontalOverflow = HorizontalWrapMode.Wrap;
+            footer.text = "Se conservan al reiniciar. En partida: 1–9 / 0 para cambiar.";
+            panel.Find("Resume Button").GetComponent<RectTransform>().anchoredPosition = new Vector2(526f, -672f);
         }
         private static void UiButton(string name, string labelName, Transform parent, Vector2 position, Vector2 size, Color background, string label, int fontSize, Color textColor)
         {

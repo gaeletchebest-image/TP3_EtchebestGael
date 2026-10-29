@@ -42,7 +42,10 @@ namespace HandShooter.Tests
             Assert.That(weapon.TryFire(), Is.True);
             Assert.That(target.Health, Is.EqualTo(before));
             Assert.That(Object.FindFirstObjectByType<HandProjectile>(), Is.Not.Null);
-            yield return new WaitForSeconds(0.85f);
+            // Travel time follows the current balance asset, including damage-based slowdown.
+            float flightTime = Vector3.Distance(weapon.muzzle.position, target.transform.position) /
+                weapon.settings.EvaluateProjectileSpeed(weapon.Stats.Damage);
+            yield return new WaitForSeconds(flightTime + 0.1f);
             Assert.That(target.Health, Is.EqualTo(before - 3));
         }
         [UnityTest] public IEnumerator MenuPausesWorldBlocksShootingAndButtonsChangeConfiguration()

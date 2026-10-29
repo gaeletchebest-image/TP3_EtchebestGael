@@ -6,6 +6,8 @@ Abrir `Assets/Scenes/HandShooterPrototype.unity` y pulsar Play.
 - Tab: abrir/cerrar configuración. Escape: abrir/cerrar y liberar el cursor.
 - El menú pausa el mundo, libera el mouse y bloquea movimiento/disparos.
 - Clic sobre los dedos: activar/desactivar. Solo se permite un grupo continuo de al menos un dedo. Para mover el grupo, agregar un vecino y quitar el extremo opuesto.
+- Con el menú abierto, clic en un espacio o tecla **1–9 / 0**: guardar o reemplazar la configuración actual (dedos exactos y pulgar). Cada espacio muestra los dedos guardados y el tipo de disparo; los que coinciden con la mano actual se resaltan.
+- Durante la partida, **1–9 / 0** activa la configuración guardada. También funciona el teclado numérico. Los espacios vacíos no hacen nada. Se conservan entre partidas y al cerrar el juego mediante PlayerPrefs; cambiar de configuración mantiene el combustible, la recarga y el progreso de espera entre disparos.
 - Pulgar activo: raycast instantáneo con daño/espera base.
 - Pulgar inactivo: proyectil visible con daño ×2 y tiempo entre disparos ×2.
 - Los blancos muestran vida y último impacto; se regeneran al destruirse.

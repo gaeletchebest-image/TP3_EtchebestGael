@@ -13,6 +13,7 @@ namespace HandShooter
         public Transform[] fingerVisuals;
         public Transform thumbVisual;
         public HandConfiguration Hand { get; private set; }
+        public HandPresetStore Presets { get; private set; }
         public ShotStats Stats => settings.Evaluate(Hand);
         public float CooldownRemaining => cooldownFraction * Stats.Interval;
         public float LastHitDamage { get; private set; }
@@ -31,6 +32,7 @@ namespace HandShooter
         public float FuelFraction => tankCapacity <= 0f ? 0f : Fuel / tankCapacity;
         public event Action<float> Hit;
         public event Action FuelChanged;
+        public event Action<int> PresetSaved;
         private float cooldownFraction;
         private bool requireRelease;
         private float recoil;
@@ -39,17 +41,45 @@ namespace HandShooter
         private void Awake()
         {
             Hand = new HandConfiguration(settings.initialActiveFingers, settings.initialThumbActive);
+            Presets = new HandPresetStore();
             Fuel = tankCapacity;
             SpareTankCount = startingSpareTanks;
             handRestPosition = transform.localPosition;
             handRestRotation = transform.localRotation;
         }
         public void RequireTriggerRelease() { requireRelease = true; }
+        public bool SavePreset(int digit)
+        {
+            if (player.IsDead || !player.IsMenuOpen || !Presets.Save(digit, Hand)) return false;
+            PresetSaved?.Invoke(digit);
+            return true;
+        }
+        public bool TryEquipPreset(int digit)
+        {
+            if (player.IsDead || player.IsMenuOpen || Time.timeScale <= 0f ||
+                Cursor.lockState != CursorLockMode.Locked) return false;
+            HandPreset preset = Presets.Get(digit);
+            // Only the hand changes: fuel, reload and cooldown progress are preserved.
+            return preset.IsSaved && Hand.TryApply(preset.ActiveMask, preset.ThumbActive);
+        }
+        private void UpdatePresetInput(Keyboard keyboard)
+        {
+            if (keyboard == null || player.IsDead) return;
+            for (int digit = 0; digit < HandPresetStore.SlotCount; digit++)
+            {
+                Key topRow = digit == 0 ? Key.Digit0 : (Key)((int)Key.Digit1 + digit - 1);
+                Key numpad = (Key)((int)Key.Numpad0 + digit);
+                if (!keyboard[topRow].wasPressedThisFrame && !keyboard[numpad].wasPressedThisFrame) continue;
+                if (player.IsMenuOpen) SavePreset(digit);
+                else TryEquipPreset(digit);
+            }
+        }
         private void Update()
         {
+            var keyboard = Keyboard.current;
+            UpdatePresetInput(keyboard);
             cooldownFraction = Mathf.Max(0f, cooldownFraction - Time.deltaTime / Stats.Interval);
             UpdateHandVisuals();
-            var keyboard = Keyboard.current;
             if (keyboard != null && keyboard.rKey.wasPressedThisFrame && !player.IsMenuOpen && Cursor.lockState == CursorLockMode.Locked)
                 BeginReloadFuel();
             var mouse = Mouse.current;
