@@ -24,6 +24,7 @@ namespace HandShooter.Editor
                 var scene = SceneManager.GetActiveScene();
                 EnsureKamikaze();
                 SniperSetup.EnsureSniper();
+                HunterSetup.EnsureHunter();
                 var player = Object.FindFirstObjectByType<PrototypePlayer>();
                 if (player && (!player.deathScreen || !player.deathHint)) EnsureDeathScreen();
                 var turret = Object.FindFirstObjectByType<TurretEnemy>();
@@ -53,6 +54,7 @@ namespace HandShooter.Editor
                 EnsureTurret();
                 EnsureKamikaze();
                 SniperSetup.EnsureSniper();
+                HunterSetup.EnsureHunter();
                 EnsureDeathScreen();
                 ConvertTurretToPrefab();
                 ConvertKamikazeToPrefab();
@@ -149,6 +151,7 @@ namespace HandShooter.Editor
             EnsureTurret();
             EnsureKamikaze();
             SniperSetup.EnsureSniper();
+            HunterSetup.EnsureHunter();
             ConvertTurretToPrefab();
             ConvertKamikazeToPrefab();
             EditorSceneManager.SaveScene(scene, ScenePath);

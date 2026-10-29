@@ -8,7 +8,9 @@ namespace HandShooter
         public TurretSettings turretSettings;
         public KamikazeSettings kamikazeSettings;
         public SniperSettings sniperSettings;
-        private float InitialHealth => sniperSettings ? sniperSettings.initialHealth : kamikazeSettings ? kamikazeSettings.initialHealth :
+        public HunterSettings hunterSettings;
+        public event System.Action<float> Damaged;
+        private float InitialHealth => hunterSettings ? hunterSettings.initialHealth : sniperSettings ? sniperSettings.initialHealth : kamikazeSettings ? kamikazeSettings.initialHealth :
             turretSettings ? turretSettings.initialHealth : settings.targetHealth;
         public TextMesh label;
         public float Health { get; private set; }
@@ -33,10 +35,11 @@ namespace HandShooter
             LastDamage = amount;
             Health = Mathf.Max(0, Health - amount);
             flashUntil = Time.time + 0.12f;
+            Damaged?.Invoke(amount);
             if (Health <= 0)
             {
                 DestroyedCount++;
-                if (turretSettings || kamikazeSettings || sniperSettings) { body.enabled = hitCollider.enabled = false; Destroy(gameObject); return true; }
+                if (turretSettings || kamikazeSettings || sniperSettings || hunterSettings) { body.enabled = hitCollider.enabled = false; Destroy(gameObject); return true; }
                 respawnAt = Time.time + settings.targetRespawnDelay;
                 body.enabled = hitCollider.enabled = false;
             }

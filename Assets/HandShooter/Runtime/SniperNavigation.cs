@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace HandShooter
 {
-    // One owned mesh per scene, shared by all snipers and removed on scene unload.
+    // One owned mesh per scene, shared by snipers and hunters and removed on scene unload.
     // Build from colliders so walls match both movement and hitscan cover.
     public sealed class SniperNavigation : MonoBehaviour
     {
