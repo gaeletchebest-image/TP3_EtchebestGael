@@ -1,5 +1,34 @@
 # Hand Shooter — prototipo
 
+## Defensa de enemigos
+
+Cada enemigo tiene `initialDefensePoints` (puntos iniciales, mínimo 0) y `defenseBarCapacity` (disparos por punto, mínimo 1) en su asset de ajustes y en **Laboratorio de balance > Ajustes > enemigo > Defensa**. Solo el sniper y la torreta empiezan con **1 punto y barra de 3 impactos**. El hunter, el kamikaze y los blancos no tienen defensa y no muestran contador ni barra de defensa. Los perfiles anteriores conservan su balance sin defensa hasta configurarlos.
+
+El daño recibido es `daño / 2^puntos`: 1 punto deja pasar el 50 %, 2 el 25 %, 3 el 12.5 %. Cada disparo del jugador que alcanza al enemigo resta **exactamente 1** a su barra, independientemente del daño, los dedos o el tipo de disparo. Un proyectil con impacto directo y explosión cuenta una sola vez por enemigo, incluso con varios colliders; los enemigos alcanzados únicamente por el área también pierden una unidad. Los disparos fallados o bloqueados por cobertura no la gastan.
+
+El impacto que vacía la barra usa la defensa que había al recibirlo; después se pierde un punto y la barra se rellena para el siguiente. Al llegar a 0 puntos desaparecen el contador y la barra azul que acompañan a la vida. La defensa reduce también el daño de otros enemigos, pero solo los disparos del jugador desgastan la barra. Reiniciar el enemigo o repetir el encuentro restablece su defensa inicial. Los blancos de práctica siguen sin defensa.
+
+El indicador de impacto y el historial registran el daño después de la reducción. En **Comparar**, el daño y DPS corresponden a la defensa inicial; impactos, tiempo y combustible para matar incluyen cómo se pierde con cada disparo.
+
+## Laboratorio de balance
+
+Abrir **Hand Shooter > Laboratorio de balance**. La ventana tiene cuatro pestañas:
+
+1. **Ajustes:** editar mano, explosión, combustible, movimiento y cada enemigo. Los valores se guardan en `Assets/HandShooter/Balance/Borrador.asset`, una copia independiente de los ajustes del juego. Se crea también el perfil **Base inicial** para poder recuperar los valores anteriores.
+2. **Comparar:** elegir enemigo, distancia y cantidad de blancos juntos. La tabla muestra las ocho variantes de estadísticas de la mano: daño directo y de área, radio, cadencia, DPS, DPS con recargas, impactos para matar, tiempo ideal, combustible por baja y disparos por tanque. Arrastrar un perfil a Referencia permite comparar versiones. La vida personalizada permite comparar armas contra la misma vida, aunque los perfiles cambien la vida del enemigo.
+3. **Pruebas e historial:** elegir blanco estático, hunter, sniper, kamikazes, torreta o grupo mixto; ajustar distancia, cantidad, separación, cobertura, tiempo y mano inicial; pulsar **Probar borrador**. Se abre la escena independiente `Assets/Scenes/BalanceLab.unity`, que reutiliza el jugador, HUD y prefabs reales. Se genera al preparar la primera prueba. Al detener Play desde la ventana vuelve a abrirse la escena anterior. Unity ofrece guardar las escenas modificadas antes de entrar a la prueba.
+4. **Perfiles:** nombrar el borrador, anotar la hipótesis, guardar versiones, cargar una versión y consultar sus diferencias. **Aplicar borrador al juego** copia los ajustes a los cinco assets originales y el combustible al arma de la escena del prototipo. Si esa escena ya estaba abierta, guardar la escena para conservar el combustible; los assets se guardan al aplicar. Para revertir, cargar y aplicar **Base inicial**. Los perfiles guardados no cambian al seguir editando el borrador.
+
+Flujo recomendado: guardar una versión, cambiar una o dos variables, revisar la tabla, probar el mismo encuentro varias veces y comparar resultados. No se busca igualar todos los DPS: considerar combustible, distancia, explosión, precisión y margen de reacción.
+
+Durante las pruebas: WASD y mouse, clic para disparar, R para recargar, Tab para pausar/configurar la mano y **F5 para repetir**. El panel se cierra al iniciar para dejar visible el juego. Al terminar, **Volver al laboratorio** detiene Play, restaura la escena anterior y abre el historial; detener Play manualmente tiene el mismo efecto. Para editar durante una prueba, volver a abrir la ventana desde el menú. Repetir recarga la escena: reinicia enemigos, posiciones, mano, tanques y espera del arma. Los ajustes del borrador se leen en vivo sobre copias de ejecución; la vida inicial y el combustible inicial se aplican al repetir. Una prueba con cambios en vivo queda marcada y se excluye de la comparación automática A/B.
+
+Cada prueba registra tiempo de juego (excluye pausas), disparos, porcentaje de disparos que dañaron algún blanco, bajas atribuibles al arma, combustible gastado, recargas completadas, daño efectivo limitado por la vida restante y causa de muerte. Una explosión que alcanza varios enemigos cuenta como un único disparo acertado. Las muertes por explosiones de otros enemigos no se atribuyen al arma. La prueba termina al despejar el encuentro, morir, agotar el tiempo o finalizarla manualmente; salir antes registra una interrupción.
+
+El historial conserva las últimas 100 pruebas en `UserSettings/HandShooterBalanceHistory.json` (local, fuera de Git). La ventana muestra las últimas 20 y compara con la prueba anterior que tenga igual configuración de encuentro y resultado. **Exportar CSV** y **Exportar JSON con ajustes** incluyen el historial; JSON conserva también snapshots completos de los ajustes iniciales/finales. Esto permite conocer los parámetros de una prueba aunque el perfil se haya modificado después.
+
+Los tiempos de la tabla son estimaciones ideales: primer disparo disponible, impactos perfectos, objetivo quieto, sin cobertura y recarga inmediata cuando hace falta. La espera del arma transcurre durante la recarga. El daño directo del proyectil incluye la explosión cuando tiene radio; el daño a grupos supone que todos están dentro del área y sin cobertura. El DPS sostenido supone suministro de tanques; el tiempo para matar sí respeta las reservas iniciales. **No viable** significa que falta combustible o que el objetivo excede el alcance/la duración del proyectil. Los valores reales se contrastan jugando.
+
 Abrir `Assets/Scenes/HandShooterPrototype.unity` y pulsar Play.
 
 - WASD: movimiento. Mouse: cámara. Clic izquierdo: disparo (mantener para automático).

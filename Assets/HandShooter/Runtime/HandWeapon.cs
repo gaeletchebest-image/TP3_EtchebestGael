@@ -33,6 +33,10 @@ namespace HandShooter
         public event Action<float> Hit;
         public event Action FuelChanged;
         public event Action<int> PresetSaved;
+        public event Action<int, float> ShotFired;
+        public event Action<int, DamageTarget, float, bool> DamageDealt;
+        public event Action Reloaded;
+        private int shotSequence;
         private float cooldownFraction;
         private bool requireRelease;
         private float recoil;
@@ -96,6 +100,8 @@ namespace HandShooter
             if (Fuel + 0.0001f < fuelCost) return false;
             Fuel = Mathf.Max(0f, Fuel - fuelCost);
             FuelChanged?.Invoke();
+            int shotId = ++shotSequence;
+            ShotFired?.Invoke(shotId, fuelCost);
             cooldownFraction = 1f;
             recoil = 1f;
             Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
@@ -109,13 +115,13 @@ namespace HandShooter
             {
                 if (stats.Hitscan)
                 {
-                    Damage(obstruction.collider, stats.Damage);
+                    Damage(obstruction.collider, stats.Damage, shotId);
                     DrawBeam(ray.origin, obstruction.point, settings.rayColor);
                 }
                 else
                 {
                     var blockedProjectile = Instantiate(settings.projectilePrefab, ray.origin, Quaternion.LookRotation(direction));
-                    blockedProjectile.Initialize(direction, stats.Damage, settings, this);
+                    blockedProjectile.Initialize(direction, stats.Damage, settings, this, shotId);
                     blockedProjectile.Detonate(obstruction.collider, obstruction.point, obstruction.normal);
                 }
                 return true;
@@ -123,13 +129,13 @@ namespace HandShooter
             if (stats.Hitscan)
             {
                 if (Physics.Raycast(start, direction, out RaycastHit hit, Vector3.Distance(start, end) + 0.02f, mask, QueryTriggerInteraction.Ignore))
-                { end = hit.point; Damage(hit.collider, stats.Damage); }
+                { end = hit.point; Damage(hit.collider, stats.Damage, shotId); }
                 DrawBeam(start, end, settings.rayColor);
             }
             else
             {
                 HandProjectile projectile = Instantiate(settings.projectilePrefab, start, Quaternion.LookRotation(direction));
-                projectile.Initialize(direction, stats.Damage, settings, this);
+                projectile.Initialize(direction, stats.Damage, settings, this, shotId);
             }
             return true;
         }
@@ -139,6 +145,7 @@ namespace HandShooter
             SpareTankCount--;
             Fuel = tankCapacity;
             FuelChanged?.Invoke();
+            Reloaded?.Invoke();
             return true;
         }
         private bool BeginReloadFuel()
@@ -171,17 +178,20 @@ namespace HandShooter
             SpareTankCount += count;
             FuelChanged?.Invoke();
         }
-        public void Damage(Collider collider, float damage)
+        public void Damage(Collider collider, float damage, int shotId = -1)
         {
-            Damage(collider.GetComponentInParent<DamageTarget>(), damage);
+            Damage(collider.GetComponentInParent<DamageTarget>(), damage, shotId);
         }
-        public void Damage(DamageTarget target, float damage)
+        public void Damage(DamageTarget target, float damage, int shotId = -1)
         {
-            if (target && target.TakeDamage(damage))
+            float before = target ? target.Health : 0f;
+            if (target && target.TakePlayerShotDamage(damage))
             {
-                LastHitDamage = damage;
+                float receivedDamage = target.LastDamage;
+                LastHitDamage = receivedDamage;
                 LastHitTime = Time.time;
-                Hit?.Invoke(damage);
+                Hit?.Invoke(receivedDamage);
+                DamageDealt?.Invoke(shotId, target, Mathf.Min(before, receivedDamage), before > 0f && target.Health <= 0f);
             }
         }
         private void DrawBeam(Vector3 start, Vector3 end, Color color)

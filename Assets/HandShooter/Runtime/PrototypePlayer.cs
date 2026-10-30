@@ -16,6 +16,8 @@ namespace HandShooter
         public Text deathHint;
         public bool IsMenuOpen { get; private set; }
         public bool IsDead { get; private set; }
+        public bool spawnDefaultFuelPickups = true;
+        public event System.Action<string> Died;
         public float DashCooldownFraction => settings == null || settings.dashCooldown <= 0f
             ? 1f : Mathf.Clamp01(1f - dashCooldownRemaining / settings.dashCooldown);
         private CharacterController controller;
@@ -25,7 +27,7 @@ namespace HandShooter
         private float dashCooldownRemaining;
         private float previousTimeScale = 1f;
         private void Awake() { controller = GetComponent<CharacterController>(); }
-        private void Start() { SetMenuOpen(false); FuelTankPickup.SpawnDefaultPickups(transform); }
+        private void Start() { SetMenuOpen(false); if (spawnDefaultFuelPickups) FuelTankPickup.SpawnDefaultPickups(transform); }
         private void Update()
         {
             var keyboard = Keyboard.current;
@@ -92,10 +94,11 @@ namespace HandShooter
             Cursor.visible = open;
             if (weapon) weapon.RequireTriggerRelease();
         }
-        public void Die()
+        public void Die(string cause = "Enemigo")
         {
             if (IsDead) return;
             IsDead = true;
+            Died?.Invoke(cause);
             IsMenuOpen = false;
             Time.timeScale = 0f;
             Cursor.lockState = CursorLockMode.None;

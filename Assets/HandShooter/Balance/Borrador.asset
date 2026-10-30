@@ -1,0 +1,191 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8425047339727720520
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a73f82fdcff0c042aa5bd39ba59c8f8, type: 3}
+  m_Name: TurretSettings
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.TurretSettings
+  initialHealth: 24
+  detectionRange: 15
+  fireInterval: 1
+  projectileSpeed: 18
+  projectileRadius: 0.12
+  projectileLifetime: 5
+  projectileColor: {r: 1, g: 0, b: 0, a: 1}
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 51
+--- !u!114 &-5264165313306095656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8780f1b62450241419b71e8dab22e98c, type: 3}
+  m_Name: SniperSettings
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.SniperSettings
+  initialHealth: 20
+  detectionRange: 26
+  moveSpeed: 4
+  repathInterval: 0.5
+  positioningTolerance: 0.65
+  minimumAttackRange: 7
+  maximumAttackRange: 19
+  settleDuration: 0.4
+  chargeDuration: 1.2
+  aimLockDuration: 0.35
+  shotCooldown: 1.8
+  beamDuration: 0.18
+  warningWidth: 0.035
+  beamWidth: 0.16
+  warningColor: {r: 1, g: 0.2, b: 0.12, a: 1}
+  lockedColor: {r: 1, g: 0.9, b: 0.35, a: 1}
+  beamMaterial: {fileID: 2100000, guid: cd83be34633e3054f9ae124789dd04f4, type: 2}
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &-2737557273503749687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32dc7e351ddd3be42b8ee1f64743e69d, type: 3}
+  m_Name: ShooterSettings
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.ShooterSettings
+  baseDamage: 1
+  additionalFingerMultiplier: 2
+  cooldownByInactiveFingers:
+  - 1
+  - 0.65
+  - 0.4
+  - 0.2
+  projectileDamageMultiplier: 2
+  projectileCooldownMultiplier: 2
+  projectileFuelEfficiency: 0.5
+  projectileSpeed: 10
+  projectileSpeedDamageExponent: 0.5
+  projectileRadius: 0.09
+  projectileLifetime: 8
+  projectilePrefab: {fileID: 8072563373845372616, guid: d2c6a05da59ec19468aada5b6edf2992, type: 3}
+  explosionDamageFraction: 0.5
+  explosionBaseRadius: 1.25
+  explosionReferenceDamage: 2
+  explosionRadiusExponent: 0.5
+  explosionMaxRadius: 4
+  explosionVisualDuration: 0.35
+  explosionColor: {r: 1, g: 0.55, b: 0.15, a: 1}
+  range: 100
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 51
+  automaticFire: 1
+  beamDuration: 0.07
+  rayColor: {r: 0.2, g: 1, b: 0.85, a: 1}
+  projectileColor: {r: 1, g: 0.5, b: 0.15, a: 1}
+  beamMaterial: {fileID: 2100000, guid: cd83be34633e3054f9ae124789dd04f4, type: 2}
+  initialActiveFingers: 1
+  initialThumbActive: 1
+  moveSpeed: 6
+  dashSpeed: 20
+  dashDuration: 0.3
+  dashCooldown: 0.5
+  dashKey: 51
+  mouseSensitivity: 0.12
+  pitchLimit: 85
+  fieldOfView: 75
+  gravity: -22
+  forwardKey: 37
+  backwardKey: 33
+  leftKey: 15
+  rightKey: 18
+  menuKey: 3
+  targetHealth: 32
+  targetRespawnDelay: 2
+--- !u!114 &-415160627180936038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0f6343e864f3e348b46ebd69fc02ff2, type: 3}
+  m_Name: HunterSettings
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.HunterSettings
+  initialHealth: 24
+  range: 5
+  chaseSpeed: 12
+  acceleration: 60
+  repathInterval: 0.1
+  beamDuration: 0.18
+  beamWidth: 0.16
+  beamColor: {r: 1, g: 0.9, b: 0.35, a: 1}
+  beamMaterial: {fileID: 2100000, guid: cd83be34633e3054f9ae124789dd04f4, type: 2}
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  normalColor: {r: 0.15, g: 0.9, b: 0.8, a: 1}
+  alertColor: {r: 1, g: 0.12, b: 0.05, a: 1}
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9da60be46c2bd1443904a3a7b951f181, type: 3}
+  m_Name: Borrador
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.BalanceProfile
+  title: Base actual
+  notes: 
+  shooter: {fileID: -2737557273503749687}
+  turret: {fileID: -8425047339727720520}
+  kamikaze: {fileID: 845656784492977127}
+  sniper: {fileID: -5264165313306095656}
+  hunter: {fileID: -415160627180936038}
+  weapon:
+    tankCapacity: 100
+    fuelPerDamage: 1
+    startingSpareTanks: 2
+    reloadDuration: 1.25
+--- !u!114 &845656784492977127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83d8b709657f4d739d9ab04d1b7930fc, type: 3}
+  m_Name: KamikazeSettings
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.KamikazeSettings
+  initialHealth: 18
+  detectionRange: 18
+  moveSpeed: 8
+  detonationRange: 1.8
+  blastRadius: 4
+  blastDamage: 32
+  explosionVisualDuration: 0.45
+  explosionColor: {r: 1, g: 0.28, b: 0.06, a: 1}
+  explosionMaterial: {fileID: 2100000, guid: cd83be34633e3054f9ae124789dd04f4, type: 2}
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 51

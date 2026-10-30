@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: HunterSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.HunterSettings
   initialHealth: 24
+  initialDefensePoints: 0
+  defenseBarCapacity: 3
   range: 5
   chaseSpeed: 12
   acceleration: 60

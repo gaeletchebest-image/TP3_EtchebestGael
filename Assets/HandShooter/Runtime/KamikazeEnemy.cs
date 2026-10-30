@@ -87,7 +87,7 @@ namespace HandShooter
 
             ExplosionEffect.Spawn(origin, radius, settings.explosionVisualDuration,
                 settings.explosionMaterial, settings.explosionColor);
-            foreach (var player in players) player.Die();
+            foreach (var player in players) player.Die("Kamikaze");
             foreach (var damageable in damagedTargets) damageable.TakeDamage(settings.blastDamage);
 
             damageTarget.enabled = false;

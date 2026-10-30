@@ -1,1 +1,1 @@
-{"name":"HandShooter.EditModeTests","references":["HandShooter.Runtime"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"]}
+{"name":"HandShooter.EditModeTests","references":["HandShooter.Runtime","HandShooter.Editor"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"]}

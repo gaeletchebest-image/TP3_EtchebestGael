@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: SniperSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.SniperSettings
   initialHealth: 20
+  initialDefensePoints: 1
+  defenseBarCapacity: 3
   detectionRange: 26
   moveSpeed: 4
   repathInterval: 0.5

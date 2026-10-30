@@ -259,7 +259,7 @@ namespace HandShooter
             SetState(AttackState.Recovering);
             HideWarning();
             // Resolve damage in the same frame. There is no travelling projectile.
-            if (victim) victim.Die();
+            if (victim) victim.Die("Sniper");
         }
 
         private void Face(Vector3 direction)

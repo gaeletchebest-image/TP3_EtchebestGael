@@ -7,6 +7,12 @@ namespace HandShooter
     {
         [Header("Vida y movimiento")]
         [Min(0.01f)] public float initialHealth = 20f;
+        [Header("Defensa")]
+        [Tooltip("Cada punto divide por 2 el daño recibido. Cero desactiva la defensa.")]
+        [Min(0)] public int initialDefensePoints;
+        [Tooltip("Disparos del jugador necesarios para perder un punto de defensa.")]
+        [Min(1)] public int defenseBarCapacity = 3;
+        [Header("Movimiento")]
         [Min(0f)] public float detectionRange = 26f;
         [Min(0.1f)] public float moveSpeed = 2f;
         [Min(0.1f)] public float repathInterval = 0.5f;

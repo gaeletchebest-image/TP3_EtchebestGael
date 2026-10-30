@@ -9,14 +9,16 @@ namespace HandShooter
         private float damage, speed, radius, remainingLife, remainingRange;
         private int hitMask;
         private HandWeapon owner;
+        private int shotId;
         private bool initialized;
         private ExplosionStats explosion;
         private Material effectMaterial;
         private Color effectColor;
         private float effectDuration;
 
-        public void Initialize(Vector3 flightDirection, float shotDamage, ShooterSettings settings, HandWeapon weapon)
+        public void Initialize(Vector3 flightDirection, float shotDamage, ShooterSettings settings, HandWeapon weapon, int sourceShotId = -1)
         {
+            shotId = sourceShotId;
             direction = flightDirection.normalized;
             damage = shotDamage;
             speed = settings.EvaluateProjectileSpeed(shotDamage);
@@ -91,8 +93,8 @@ namespace HandShooter
         }
         private void ApplyDamage(DamageTarget target, float amount)
         {
-            if (owner) owner.Damage(target, amount);
-            else target.TakeDamage(amount);
+            if (owner) owner.Damage(target, amount, shotId);
+            else target.TakePlayerShotDamage(amount);
         }
     }
 }

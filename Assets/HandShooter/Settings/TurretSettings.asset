@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: TurretSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.TurretSettings
   initialHealth: 24
+  initialDefensePoints: 1
+  defenseBarCapacity: 3
   detectionRange: 15
   fireInterval: 1
   projectileSpeed: 18

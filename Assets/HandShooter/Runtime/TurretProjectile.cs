@@ -26,7 +26,7 @@ namespace HandShooter
             {
                 if (owner && hit.transform.IsChildOf(owner)) continue;
                 var player = hit.collider.GetComponentInParent<PrototypePlayer>();
-                if (player) player.Die();
+                if (player) player.Die("Torreta");
                 Destroy(gameObject);
                 return;
             }

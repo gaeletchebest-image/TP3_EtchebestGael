@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: KamikazeSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.KamikazeSettings
   initialHealth: 18
+  initialDefensePoints: 0
+  defenseBarCapacity: 3
   detectionRange: 18
   moveSpeed: 8
   detonationRange: 1.8

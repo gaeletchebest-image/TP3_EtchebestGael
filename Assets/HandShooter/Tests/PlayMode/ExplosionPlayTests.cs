@@ -48,6 +48,7 @@ namespace HandShooter.Tests
             projectile.Initialize(Vector3.forward, damage, settings, weapon);
             return projectile;
         }
+        private float TravelTime(float damage) => 1.2f / settings.EvaluateProjectileSpeed(damage);
         [UnityTest] public IEnumerator DirectHitGetsFullDamagePlusSplashAndNeighboursGetSplashOnce()
         {
             var direct = Target(Vector3.forward);
@@ -57,7 +58,7 @@ namespace HandShooter.Tests
             child.transform.SetParent(nearby.transform, false);
             child.transform.localScale = Vector3.one * 0.8f;
             var shot = Launch(8);
-            shot.Simulate(0.2f);
+            shot.Simulate(TravelTime(8));
             Assert.That(direct.Health, Is.EqualTo(20));
             Assert.That(nearby.Health, Is.EqualTo(28));
             Assert.That(outside.Health, Is.EqualTo(32));
@@ -74,7 +75,7 @@ namespace HandShooter.Tests
             var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             wall.transform.position = origin + new Vector3(0.45f, 0, 0.9f);
             wall.transform.localScale = new Vector3(0.08f, 2, 1);
-            Launch(8).Simulate(0.2f);
+            Launch(8).Simulate(TravelTime(8));
             Assert.That(direct.Health, Is.EqualTo(20));
             Assert.That(nearby.Health, Is.EqualTo(32));
             yield return null;
@@ -83,10 +84,10 @@ namespace HandShooter.Tests
         {
             var direct = Target(Vector3.forward);
             var distant = Target(new Vector3(2.2f, 0, 1));
-            Launch(2).Simulate(0.2f);
+            Launch(2).Simulate(TravelTime(2));
             Assert.That(distant.Health, Is.EqualTo(32));
             direct.ResetTarget();
-            Launch(16).Simulate(0.2f);
+            Launch(16).Simulate(TravelTime(16));
             Assert.That(direct.Health, Is.EqualTo(8));
             Assert.That(distant.Health, Is.EqualTo(24));
             yield return null;
@@ -98,7 +99,7 @@ namespace HandShooter.Tests
             var shot = Launch(8);
             settings.explosionDamageFraction = 0;
             settings.explosionBaseRadius = 0;
-            shot.Simulate(0.2f);
+            shot.Simulate(TravelTime(8));
             Assert.That(direct.Health, Is.EqualTo(20));
             Assert.That(nearby.Health, Is.EqualTo(28));
             yield return null;
@@ -108,7 +109,7 @@ namespace HandShooter.Tests
             settings.explosionDamageFraction = 0;
             var direct = Target(Vector3.forward);
             var nearby = Target(new Vector3(0.9f, 0, 1.3f));
-            Launch(8).Simulate(0.2f);
+            Launch(8).Simulate(TravelTime(8));
             Assert.That(direct.Health, Is.EqualTo(24));
             Assert.That(nearby.Health, Is.EqualTo(32));
             Assert.That(Object.FindFirstObjectByType<ExplosionEffect>(), Is.Null);
@@ -120,7 +121,7 @@ namespace HandShooter.Tests
             var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             wall.transform.position = origin + Vector3.forward;
             wall.transform.localScale = new Vector3(0.3f, 2, 0.2f);
-            Launch(8).Simulate(0.2f);
+            Launch(8).Simulate(TravelTime(8));
             Assert.That(nearby.Health, Is.EqualTo(28));
             yield return null;
             Assert.That(Object.FindFirstObjectByType<ExplosionEffect>(), Is.Not.Null);
