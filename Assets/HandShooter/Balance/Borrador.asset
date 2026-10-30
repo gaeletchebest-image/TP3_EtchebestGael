@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: TurretSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.TurretSettings
   initialHealth: 24
+  initialDefensePoints: 1
+  defenseBarCapacity: 3
   detectionRange: 15
   fireInterval: 1
   projectileSpeed: 18
@@ -35,6 +37,8 @@ MonoBehaviour:
   m_Name: SniperSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.SniperSettings
   initialHealth: 20
+  initialDefensePoints: 1
+  defenseBarCapacity: 3
   detectionRange: 26
   moveSpeed: 4
   repathInterval: 0.5
@@ -128,7 +132,13 @@ MonoBehaviour:
   m_Name: HunterSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.HunterSettings
   initialHealth: 24
+  initialDefensePoints: 0
+  defenseBarCapacity: 3
   range: 5
+  patrolRadius: 6
+  patrolSpeed: 12
+  patrolWaitMin: 0.5
+  patrolWaitMax: 1.5
   chaseSpeed: 12
   acceleration: 60
   repathInterval: 0.1
@@ -178,6 +188,8 @@ MonoBehaviour:
   m_Name: KamikazeSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.KamikazeSettings
   initialHealth: 18
+  initialDefensePoints: 0
+  defenseBarCapacity: 3
   detectionRange: 18
   moveSpeed: 8
   detonationRange: 1.8

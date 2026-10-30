@@ -16,6 +16,15 @@ namespace HandShooter
         [Tooltip("Único alcance horizontal para ver y disparar. Requiere línea de visión.")]
         [Min(0.1f)] public float range = 5f;
 
+        [Header("Patrulla sin detectar al jugador")]
+        [Tooltip("Radio alrededor del centro de patrulla. Cero mantiene al hunter quieto.")]
+        [Min(0f)] public float patrolRadius = 6f;
+        [Min(0.1f)] public float patrolSpeed = 2f;
+        [Tooltip("Espera mínima al llegar a cada destino, en segundos.")]
+        [Min(0f)] public float patrolWaitMin = 1f;
+        [Tooltip("Espera máxima al llegar a cada destino, en segundos.")]
+        [Min(0f)] public float patrolWaitMax = 3f;
+
         [Header("Persecución al recibir daño")]
         [Min(0.1f)] public float chaseSpeed = 12f;
         [Min(0.1f)] public float acceleration = 60f;
@@ -31,5 +40,13 @@ namespace HandShooter
         [Header("Estado visual")]
         public Color normalColor = new Color(0.15f, 0.9f, 0.8f, 1f);
         public Color alertColor = new Color(1f, 0.12f, 0.05f, 1f);
+
+        private void OnValidate()
+        {
+            patrolRadius = Mathf.Max(0f, patrolRadius);
+            patrolSpeed = Mathf.Max(0.1f, patrolSpeed);
+            patrolWaitMin = Mathf.Max(0f, patrolWaitMin);
+            patrolWaitMax = Mathf.Max(patrolWaitMin, patrolWaitMax);
+        }
     }
 }

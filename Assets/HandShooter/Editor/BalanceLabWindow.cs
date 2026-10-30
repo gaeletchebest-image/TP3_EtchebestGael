@@ -117,7 +117,9 @@ namespace HandShooter.Editor
                 case 5:
                     Fields(draft.sniper, "Sniper", "initialHealth|Vida", "detectionRange|Detección (m)", "moveSpeed|Velocidad (m/s)", "minimumAttackRange|Alcance mínimo (m)", "maximumAttackRange|Alcance máximo (m)", "settleDuration|Preparación (s)", "chargeDuration|Carga completa (s)", "aimLockDuration|Tiempo con dirección fija (s)", "shotCooldown|Espera entre ataques (s)"); break;
                 case 6:
-                    Fields(draft.hunter, "Hunter", "initialHealth|Vida", "range|Alcance de detección y ataque (m)", "chaseSpeed|Velocidad de persecución (m/s)", "acceleration|Aceleración"); break;
+                    Fields(draft.hunter, "Hunter", "initialHealth|Vida", "range|Alcance de detección y ataque (m)", "chaseSpeed|Velocidad de persecución (m/s)", "acceleration|Aceleración");
+                    Fields(draft.hunter, "Patrulla", "patrolRadius|Radio alrededor del centro (m)", "patrolSpeed|Velocidad de patrulla (m/s)", "patrolWaitMin|Espera mínima por punto (s)", "patrolWaitMax|Espera máxima por punto (s)");
+                    break;
             }
             if (settingsTab >= 3)
             {
@@ -223,7 +225,7 @@ namespace HandShooter.Editor
             {
                 scenario = (BalanceScenario)EditorGUILayout.Popup("Escenario", (int)scenario, ScenarioNames);
                 distance = EditorGUILayout.Slider("Distancia inicial (m)", distance, 3f, 40f);
-                group = EditorGUILayout.IntSlider("Cantidad (grupos)", group, 1, 8);
+                group = EditorGUILayout.IntSlider("Cantidad de enemigos", group, 1, 8);
                 spacing = EditorGUILayout.Slider("Separación (m)", spacing, 1.5f, 5f);
                 cover = EditorGUILayout.Toggle("Cobertura intermedia", cover);
                 timeLimit = EditorGUILayout.Slider("Límite (s)", timeLimit, 5f, 180f);
@@ -241,7 +243,7 @@ namespace HandShooter.Editor
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.HelpBox("WASD + mouse, clic para disparar, R para recargar, Tab para cambiar la mano y F5 para repetir. Cada repetición restablece posiciones, enemigos, combustible y espera del arma. Se conservan las últimas 100 pruebas localmente.", MessageType.Info);
-            if (scenario == BalanceScenario.Hunter) EditorGUILayout.HelpBox("El hunter comienza a perseguirte al recibir daño. Acercarte a su alcance también permite que ataque.", MessageType.None);
+            if (scenario == BalanceScenario.Hunter) EditorGUILayout.HelpBox("El hunter patrulla alrededor de su punto inicial y espera un tiempo aleatorio en cada destino. Al recibir daño te persigue; al verte dentro de su alcance dispara.", MessageType.None);
             if (scenario == BalanceScenario.Blanco) EditorGUILayout.HelpBox("Los blancos tienen la vida configurada en Mano. Usan el cuerpo de la torreta y permanecen inmóviles; acercalos para probar explosiones.", MessageType.None);
             Heading("Historial de pruebas");
             EditorGUILayout.BeginHorizontal();

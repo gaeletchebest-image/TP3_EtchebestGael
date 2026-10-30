@@ -70,6 +70,7 @@ namespace HandShooter
         {
             // Let player/weapon/HUD initialize before subscribing or starting the clock.
             yield return null;
+            enemyCount = Mathf.Clamp(enemyCount, 1, 8);
             var setup = new Setup { scenario = scenario, distance = distance, spacing = spacing,
                 timeLimit = timeLimit, enemyCount = enemyCount, fingers = fingers, cover = cover, ray = ray };
             Trial = new BalanceTrial(new BalanceTrialResult
@@ -100,7 +101,7 @@ namespace HandShooter
                 wall.transform.position = new Vector3(0f, 1.5f, distance * 0.5f);
                 wall.transform.localScale = new Vector3(3f, 3f, 0.5f);
             }
-            int count = scenario == BalanceScenario.Blanco || scenario == BalanceScenario.Kamikazes || scenario == BalanceScenario.GrupoMixto ? enemyCount : 1;
+            int count = enemyCount;
             for (int i = 0; i < count; i++)
             {
                 BalanceScenario kind = scenario == BalanceScenario.GrupoMixto ?

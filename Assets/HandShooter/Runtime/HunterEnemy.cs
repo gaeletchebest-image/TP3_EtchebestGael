@@ -6,13 +6,15 @@ namespace HandShooter
     [RequireComponent(typeof(DamageTarget), typeof(NavMeshAgent))]
     public sealed class HunterEnemy : MonoBehaviour
     {
-        public enum BehaviourState { Normal, Chasing, Firing }
+        public enum BehaviourState { Normal, Chasing, Firing, Patrolling, Waiting }
 
         public HunterSettings settings;
         public PrototypePlayer target;
         public Transform muzzle;
         public Renderer eye;
         public TextMesh statusLabel;
+        [Tooltip("Punto alrededor del cual patrulla. Sin asignar, usa su posición inicial. Usar un objeto independiente del hunter.")]
+        public Transform patrolCenter;
         public BehaviourState State { get; private set; }
         public bool IsAlerted { get; private set; }
         public int ShotsFired { get; private set; }
@@ -23,6 +25,11 @@ namespace HandShooter
         private Material fallbackMaterial;
         private MaterialPropertyBlock eyeProperties;
         private float repathRemaining, beamRemaining;
+        private Vector3 initialPatrolCenter;
+        private NavMeshPath patrolPath;
+        private bool hasPatrolDestination;
+        private float patrolWaitRemaining;
+        private Vector3 PatrolCenter => patrolCenter ? patrolCenter.position : initialPatrolCenter;
         private bool CanNavigate => agent && agent.enabled && agent.isOnNavMesh;
         private Vector3 EyeOrigin => transform.position + Vector3.up * 0.35f;
         private Vector3 Origin => muzzle ? muzzle.position : EyeOrigin;
@@ -41,6 +48,7 @@ namespace HandShooter
             health = GetComponent<DamageTarget>();
             agent = GetComponent<NavMeshAgent>();
             eyeProperties = new MaterialPropertyBlock();
+            patrolPath = new NavMeshPath();
         }
 
         private void OnEnable() => health.Damaged += OnDamaged;
@@ -59,8 +67,10 @@ namespace HandShooter
             // Continue around cover even when already inside shooting range.
             agent.stoppingDistance = 0.1f;
             agent.updateRotation = false;
+            initialPatrolCenter = transform.position;
             if (NavMesh.SamplePosition(transform.position - Vector3.up, out var spawn, 2f, agent.areaMask))
             {
+                initialPatrolCenter = spawn.position;
                 transform.position = spawn.position + Vector3.up * agent.baseOffset;
                 agent.enabled = true;
                 agent.Warp(spawn.position);
@@ -76,17 +86,17 @@ namespace HandShooter
             if (deltaTime <= 0f) return;
             beamRemaining = Mathf.Max(0f, beamRemaining - deltaTime);
             if (shotBeam) shotBeam.enabled = beamRemaining > 0f;
-            if (!settings || !target || target.IsDead || health.Health <= 0f)
+            if (!settings || (target && target.IsDead) || health.Health <= 0f)
             {
                 StopMoving();
                 return;
             }
 
             repathRemaining -= deltaTime;
-            Vector3 offset = target.transform.position - transform.position;
+            Vector3 offset = target ? target.transform.position - transform.position : Vector3.zero;
             offset.y = 0f;
             bool inRange = offset.sqrMagnitude <= settings.range * settings.range;
-            if (inRange && HasSight(EyeOrigin, TargetPoint))
+            if (target && inRange && HasSight(EyeOrigin, TargetPoint))
             {
                 // Turning moves the muzzle. Check its final position before shooting.
                 Face(offset);
@@ -97,10 +107,80 @@ namespace HandShooter
                 }
             }
 
-            State = IsAlerted ? BehaviourState.Chasing : BehaviourState.Normal;
-            if (IsAlerted) Chase();
-            else StopMoving();
+            if (IsAlerted && target)
+            {
+                State = BehaviourState.Chasing;
+                Chase();
+            }
+            else Patrol(deltaTime);
             UpdateStatus();
+        }
+
+        private void Patrol(float deltaTime)
+        {
+            if (!CanNavigate || settings.patrolRadius <= 0f)
+            {
+                StopMoving();
+                State = BehaviourState.Normal;
+                return;
+            }
+
+            if (State == BehaviourState.Waiting)
+            {
+                patrolWaitRemaining -= deltaTime;
+                if (patrolWaitRemaining > 0f) return;
+            }
+
+            agent.speed = Mathf.Max(0.1f, settings.patrolSpeed);
+            agent.acceleration = Mathf.Max(0.1f, settings.acceleration);
+            if (hasPatrolDestination)
+            {
+                if (agent.pathPending) return;
+                if (!agent.hasPath || agent.pathStatus != NavMeshPathStatus.PathComplete ||
+                    agent.remainingDistance <= agent.stoppingDistance + 0.05f)
+                {
+                    BeginPatrolWait();
+                    return;
+                }
+                State = BehaviourState.Patrolling;
+                if (agent.desiredVelocity.sqrMagnitude > 0.01f) Face(agent.desiredVelocity);
+                return;
+            }
+
+            Vector3 center = PatrolCenter;
+            float radius = Mathf.Max(0f, settings.patrolRadius);
+            float minimumStep = Mathf.Min(1f, radius * 0.5f);
+            // Only accept destinations on a reachable part of the NavMesh, within the patrol area.
+            for (int attempt = 0; attempt < 16; attempt++)
+            {
+                Vector2 random = Random.insideUnitCircle * radius;
+                Vector3 candidate = center + new Vector3(random.x, 0f, random.y);
+                if (!NavMesh.SamplePosition(candidate, out var destination, 2f, agent.areaMask)) continue;
+                Vector3 fromCenter = destination.position - center;
+                fromCenter.y = 0f;
+                Vector3 fromHunter = destination.position - transform.position;
+                fromHunter.y = 0f;
+                if (fromCenter.sqrMagnitude > radius * radius ||
+                    fromHunter.sqrMagnitude < minimumStep * minimumStep) continue;
+                if (!agent.CalculatePath(destination.position, patrolPath) ||
+                    patrolPath.status != NavMeshPathStatus.PathComplete) continue;
+                if (!agent.SetPath(patrolPath)) continue;
+                agent.isStopped = false;
+                hasPatrolDestination = true;
+                State = BehaviourState.Patrolling;
+                return;
+            }
+
+            // An obstructed or disconnected area is retried after a pause.
+            BeginPatrolWait();
+        }
+
+        private void BeginPatrolWait()
+        {
+            StopMoving();
+            State = BehaviourState.Waiting;
+            float minimum = Mathf.Max(0f, settings.patrolWaitMin);
+            patrolWaitRemaining = Random.Range(minimum, Mathf.Max(minimum, settings.patrolWaitMax));
         }
 
         private void OnDamaged(float amount)
@@ -110,6 +190,7 @@ namespace HandShooter
             IsAlerted = true;
             State = BehaviourState.Chasing;
             repathRemaining = 0f;
+            StopMoving();
             if (target && !target.IsDead) Chase();
             UpdateStatus();
         }
@@ -131,6 +212,7 @@ namespace HandShooter
 
         private void StopMoving()
         {
+            hasPatrolDestination = false;
             if (CanNavigate) { agent.ResetPath(); agent.isStopped = true; }
         }
 
@@ -221,7 +303,8 @@ namespace HandShooter
             }
             if (statusLabel)
             {
-                statusLabel.text = State == BehaviourState.Firing ? "DISPARANDO" : IsAlerted ? "¡ALERTA!" : "NORMAL";
+                statusLabel.text = State == BehaviourState.Firing ? "DISPARANDO" : IsAlerted ? "¡ALERTA!" :
+                    State == BehaviourState.Patrolling ? "PATRULLANDO" : State == BehaviourState.Waiting ? "ESPERANDO" : "NORMAL";
                 statusLabel.color = color;
             }
             if (!target || !target.viewCamera) return;
@@ -243,6 +326,9 @@ namespace HandShooter
             if (!settings) return;
             Gizmos.color = IsAlerted ? settings.alertColor : settings.normalColor;
             Gizmos.DrawWireSphere(transform.position, settings.range);
+            Gizmos.color = new Color(0.3f, 0.65f, 1f, 0.6f);
+            Vector3 center = Application.isPlaying ? PatrolCenter : patrolCenter ? patrolCenter.position : transform.position;
+            Gizmos.DrawWireSphere(center, settings.patrolRadius);
         }
     }
 }

@@ -68,7 +68,7 @@ namespace HandShooter.Tests
             Cursor.visible = true;
         }
 
-        private IEnumerator Spawn(float distance = 12f)
+        private IEnumerator Spawn(float distance = 12f, Transform patrolCenter = null)
         {
             Time.timeScale = 0f;
             var holder = new GameObject("Hunter spawn");
@@ -92,6 +92,7 @@ namespace HandShooter.Tests
             hunter = go.GetComponent<HunterEnemy>();
             hunter.settings = settings;
             hunter.target = player;
+            hunter.patrolCenter = patrolCenter;
             holder.SetActive(true);
             Physics.SyncTransforms();
             yield return null;
@@ -110,6 +111,118 @@ namespace HandShooter.Tests
             Physics.SyncTransforms();
         }
 
+        private HandProjectile LaunchProjectile(Vector3 position, Vector3 direction, float damage = 8f)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.name = "Hunter test projectile";
+            go.layer = 2;
+            go.GetComponent<Collider>().enabled = false;
+            go.GetComponent<Renderer>().sharedMaterial = hunter.GetComponent<Renderer>().sharedMaterial;
+            go.transform.position = position;
+            var projectile = go.AddComponent<HandProjectile>();
+            projectile.enabled = false;
+            projectile.Initialize(direction, damage, playerSettings, null);
+            return projectile;
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileHitsHunterEnteringItsVolumeAfterLaunch()
+        {
+            yield return Spawn(18f);
+            var health = hunter.GetComponent<DamageTarget>();
+            health.TakeDamage(1f); // Alert the hunter as a ray hit would.
+            hunter.enabled = false;
+            hunter.GetComponent<NavMeshAgent>().enabled = false;
+            playerSettings.projectileSpeed = 0.1f;
+            Vector3 start = hunter.GetComponent<Collider>().bounds.center - Vector3.forward * 2f;
+            var projectile = LaunchProjectile(start, Vector3.forward);
+            hunter.transform.position -= Vector3.forward * 2f;
+            // Deliberately omit SyncTransforms: the projectile must handle NavMesh/Transform movement.
+            projectile.Simulate(0.1f);
+            Assert.That(health.Health, Is.EqualTo(settings.initialHealth - 1f - 12f));
+            projectile.Simulate(0.1f);
+            Assert.That(health.Health, Is.EqualTo(settings.initialHealth - 1f - 12f));
+            yield return null;
+            Assert.That(projectile == null, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileHitsHunterCrossingCompletelyBetweenFrames()
+        {
+            yield return Spawn(18f);
+            hunter.enabled = false;
+            hunter.GetComponent<NavMeshAgent>().enabled = false;
+            playerSettings.projectileSpeed = 0.1f;
+            var health = hunter.GetComponent<DamageTarget>();
+            var projectile = LaunchProjectile(hunter.GetComponent<Collider>().bounds.center - Vector3.forward * 2f,
+                Vector3.forward);
+            hunter.transform.position -= Vector3.forward * 4f;
+            projectile.Simulate(0.2f);
+            Assert.That(health.Health, Is.EqualTo(settings.initialHealth - 12f));
+            yield return null;
+            Assert.That(projectile == null, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator CrossingTheFlightLineAtDifferentTimesDoesNotCauseAFalseHit()
+        {
+            yield return Spawn(18f);
+            hunter.enabled = false;
+            hunter.GetComponent<NavMeshAgent>().enabled = false;
+            hunter.transform.position -= Vector3.right * 4f;
+            playerSettings.projectileSpeed = 40f;
+            playerSettings.projectileSpeedDamageExponent = 0f;
+            var health = hunter.GetComponent<DamageTarget>();
+            Vector3 start = hunter.transform.position + Vector3.right * 4f - Vector3.forward * 2f;
+            var projectile = LaunchProjectile(start, Vector3.forward);
+            hunter.transform.position += Vector3.right * 8f;
+            projectile.Simulate(0.2f);
+            Assert.That(health.Health, Is.EqualTo(settings.initialHealth));
+            Assert.That(Vector3.Distance(projectile.transform.position, start + Vector3.forward * 8f), Is.LessThan(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator EarlierWallImpactPreventsDirectHitOnMovingHunter()
+        {
+            yield return Spawn(18f);
+            hunter.enabled = false;
+            hunter.GetComponent<NavMeshAgent>().enabled = false;
+            playerSettings.projectileSpeed = 40f;
+            playerSettings.projectileSpeedDamageExponent = 0f;
+            playerSettings.explosionDamageFraction = 0f;
+            Wall(12f);
+            var health = hunter.GetComponent<DamageTarget>();
+            var projectile = LaunchProjectile(hunter.GetComponent<Collider>().bounds.center - Vector3.forward * 8f,
+                Vector3.forward);
+            hunter.transform.position -= Vector3.forward * 4f;
+            projectile.Simulate(0.2f);
+            Assert.That(health.Health, Is.EqualTo(settings.initialHealth));
+            yield return null;
+            Assert.That(projectile == null, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator AlertedHunterRunningIntoSlowProjectileTakesDamageWithNormalUpdates()
+        {
+            settings.chaseSpeed = 20f;
+            yield return Spawn(18f);
+            var health = hunter.GetComponent<DamageTarget>();
+            health.TakeDamage(1f);
+            playerSettings.projectileSpeed = 0.1f;
+            var projectile = LaunchProjectile(new Vector3(ArenaOrigin.x, hunter.GetComponent<Collider>().bounds.center.y, 10f),
+                Vector3.forward);
+            projectile.enabled = true;
+            Time.timeScale = 1f;
+            float started = Time.realtimeSinceStartup;
+            while (health.Health == settings.initialHealth - 1f && Time.realtimeSinceStartup - started < 3f)
+                yield return null;
+            Time.timeScale = 0f;
+            Assert.That(health.Health, Is.EqualTo(settings.initialHealth - 1f - 12f));
+            Assert.That(player.IsDead, Is.False);
+            yield return null;
+            Assert.That(projectile == null, Is.True);
+        }
+
         private static GameObject Wall(float z, float width = 5f)
         {
             var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -121,17 +234,182 @@ namespace HandShooter.Tests
         }
 
         [UnityTest]
-        public IEnumerator NormalStateStaysIdleOutsideItsShortRange()
+        public IEnumerator UnalertedHunterPatrolsOutsideItsShortRange()
         {
-            yield return Spawn();
+            yield return Spawn(18f);
             Vector3 start = hunter.transform.position;
-            hunter.Simulate(10f);
-            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Normal));
+            hunter.Simulate(0.01f);
+            var agent = hunter.GetComponent<NavMeshAgent>();
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
             Assert.That(hunter.IsAlerted, Is.False);
-            Assert.That(hunter.GetComponent<NavMeshAgent>().isStopped, Is.True);
-            Assert.That(hunter.transform.position, Is.EqualTo(start));
+            Assert.That(agent.isStopped, Is.False);
+            Assert.That(agent.speed, Is.EqualTo(settings.patrolSpeed));
+            Time.timeScale = 1f;
+            yield return new WaitForSeconds(0.3f);
+            Time.timeScale = 0f;
+            Assert.That(Vector3.Distance(hunter.transform.position, start), Is.GreaterThan(0.1f));
             Assert.That(hunter.ShotsFired, Is.Zero);
             Assert.That(player.IsDead, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator PatrolWaitsWithinConfiguredBoundsBeforeChoosingAnotherPoint()
+        {
+            settings.patrolWaitMin = 0.5f;
+            settings.patrolWaitMax = 1.2f;
+            yield return Spawn(18f);
+            var agent = hunter.GetComponent<NavMeshAgent>();
+            for (int visit = 0; visit < 5; visit++)
+            {
+                Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
+                Vector3 destination = agent.destination;
+                Assert.That(agent.Warp(destination), Is.True);
+                hunter.Simulate(0.001f);
+                Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Waiting));
+                Assert.That(hunter.statusLabel.text, Is.EqualTo("ESPERANDO"));
+                Assert.That(agent.isStopped, Is.True);
+                Vector3 restingPosition = hunter.transform.position;
+                hunter.Simulate(0.49f);
+                Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Waiting));
+                Assert.That(hunter.transform.position, Is.EqualTo(restingPosition));
+                hunter.Simulate(0.72f);
+                Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
+                Assert.That(agent.isStopped, Is.False);
+                Vector3 step = agent.destination - destination;
+                step.y = 0f;
+                Assert.That(step.magnitude, Is.GreaterThanOrEqualTo(0.99f));
+                Vector3 fromCenter = agent.destination - (ArenaOrigin + Vector3.forward * 18f);
+                fromCenter.y = 0f;
+                Assert.That(fromCenter.magnitude, Is.LessThanOrEqualTo(settings.patrolRadius + 0.01f));
+            }
+            Assert.That(player.IsDead, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator PatrolUsesAssignedCenterAndRejectsUnreachableDestinations()
+        {
+            settings.patrolRadius = 2f;
+            var center = new GameObject("Assigned patrol center").transform;
+            center.position = ArenaOrigin + new Vector3(70f, 0f, 18f);
+            // This island has a NavMesh, but no complete route from the hunter's floor.
+            var island = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            island.transform.position = center.position + Vector3.down * 0.25f;
+            island.transform.localScale = new Vector3(10f, 0.5f, 10f);
+            yield return Spawn(18f, center);
+            var agent = hunter.GetComponent<NavMeshAgent>();
+            Assert.That(NavMesh.SamplePosition(center.position, out _, 2f, agent.areaMask), Is.True);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Waiting));
+            Assert.That(agent.isStopped, Is.True);
+            Assert.That(agent.hasPath, Is.False);
+
+            center.position = ArenaOrigin + new Vector3(10f, 0f, 18f);
+            hunter.Simulate(settings.patrolWaitMax + 0.1f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
+            Vector3 fromCenter = agent.destination - center.position;
+            fromCenter.y = 0f;
+            Assert.That(fromCenter.magnitude, Is.LessThanOrEqualTo(settings.patrolRadius + 0.01f));
+            Assert.That(agent.pathStatus, Is.EqualTo(NavMeshPathStatus.PathComplete));
+        }
+
+        [UnityTest]
+        public IEnumerator PatrolNaturallyArrivesAndWaitsAtItsDestination()
+        {
+            settings.patrolRadius = 2f;
+            settings.patrolSpeed = 4f;
+            settings.patrolWaitMin = settings.patrolWaitMax = 2f;
+            yield return Spawn(18f);
+            var agent = hunter.GetComponent<NavMeshAgent>();
+            Vector3 destination = agent.destination;
+            Time.timeScale = 1f;
+            float started = Time.realtimeSinceStartup;
+            while (hunter.State != HunterEnemy.BehaviourState.Waiting &&
+                Time.realtimeSinceStartup - started < 4f) yield return null;
+            Time.timeScale = 0f;
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Waiting));
+            Vector3 remaining = destination - hunter.transform.position;
+            remaining.y = 0f;
+            Assert.That(remaining.magnitude, Is.LessThanOrEqualTo(agent.stoppingDistance + 0.1f));
+            Assert.That(agent.isStopped, Is.True);
+            hunter.Simulate(2.1f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
+        }
+
+        [UnityTest]
+        public IEnumerator DamageInterruptsPatrolWaitingImmediately()
+        {
+            settings.patrolWaitMin = settings.patrolWaitMax = 30f;
+            yield return Spawn(18f);
+            var agent = hunter.GetComponent<NavMeshAgent>();
+            Assert.That(agent.Warp(agent.destination), Is.True);
+            hunter.Simulate(0.01f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Waiting));
+            hunter.GetComponent<DamageTarget>().TakeDamage(1f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Chasing));
+            Assert.That(agent.speed, Is.EqualTo(settings.chaseSpeed));
+            Assert.That(agent.isStopped, Is.False);
+            MoveHunter(3f);
+            hunter.Simulate(0.001f);
+            Assert.That(player.IsDead, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator WaitingHunterStillDetectsPlayerAndFiresImmediately()
+        {
+            settings.patrolWaitMin = settings.patrolWaitMax = 30f;
+            yield return Spawn(18f);
+            var agent = hunter.GetComponent<NavMeshAgent>();
+            Assert.That(agent.Warp(agent.destination), Is.True);
+            hunter.Simulate(0.01f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Waiting));
+            MoveHunter(3f);
+            hunter.Simulate(0.001f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Firing));
+            Assert.That(hunter.ShotsFired, Is.EqualTo(1));
+            Assert.That(player.IsDead, Is.True);
+            Assert.That(agent.isStopped, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator PauseFreezesPatrolWaitAndDisablingStopsMovement()
+        {
+            settings.patrolWaitMin = settings.patrolWaitMax = 1f;
+            yield return Spawn(18f);
+            var agent = hunter.GetComponent<NavMeshAgent>();
+            Assert.That(agent.Warp(agent.destination), Is.True);
+            hunter.Simulate(0.001f);
+            hunter.Simulate(0f);
+            hunter.Simulate(0.9f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Waiting));
+            hunter.Simulate(0.11f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
+            hunter.enabled = false;
+            Assert.That(agent.isStopped, Is.True);
+            Assert.That(agent.hasPath, Is.False);
+            hunter.enabled = true;
+            hunter.Simulate(0.01f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
+            Assert.That(agent.isStopped, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator ZeroPatrolRadiusKeepsHunterIdleAndInvalidWaitBoundsAreSafe()
+        {
+            settings.patrolRadius = 0f;
+            settings.patrolWaitMin = 0.5f;
+            settings.patrolWaitMax = -1f;
+            yield return Spawn(18f);
+            var agent = hunter.GetComponent<NavMeshAgent>();
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Normal));
+            Assert.That(agent.isStopped, Is.True);
+            settings.patrolRadius = 2f;
+            hunter.Simulate(0.01f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
+            Assert.That(agent.Warp(agent.destination), Is.True);
+            hunter.Simulate(0.001f);
+            hunter.Simulate(0.49f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Waiting));
+            hunter.Simulate(0.02f);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling));
         }
 
         [UnityTest]
@@ -173,7 +451,9 @@ namespace HandShooter.Tests
             MoveHunter(4f);
             var wall = Wall(2f);
             hunter.Simulate(1f);
-            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Normal));
+            Assert.That(hunter.IsAlerted, Is.False);
+            Assert.That(hunter.State, Is.EqualTo(HunterEnemy.BehaviourState.Patrolling)
+                .Or.EqualTo(HunterEnemy.BehaviourState.Waiting));
             Assert.That(hunter.ShotsFired, Is.Zero);
             Assert.That(player.IsDead, Is.False);
             Object.Destroy(wall);

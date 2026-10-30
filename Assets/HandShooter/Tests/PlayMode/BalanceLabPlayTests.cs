@@ -81,13 +81,14 @@ namespace HandShooter.Tests
 
         [UnityTest] public IEnumerator EveryScenarioSpawnsWithRuntimeSettingsAndOptionalCover()
         {
+            foreach (int count in new[] { 1, 3, 8 })
             foreach (BalanceScenario kind in System.Enum.GetValues(typeof(BalanceScenario)))
             {
                 Time.timeScale = 1f;
                 UnityEngine.Events.UnityAction<Scene, LoadSceneMode> configure = (scene, mode) =>
                 {
                     var lab = Object.FindFirstObjectByType<BalanceLabSession>();
-                    lab.scenario = kind; lab.enemyCount = 3; lab.cover = true; lab.publishResults = false;
+                    lab.scenario = kind; lab.enemyCount = count; lab.cover = true; lab.publishResults = false;
                 };
                 SceneManager.sceneLoaded += configure;
                 yield return SceneManager.LoadSceneAsync("BalanceLab");
@@ -98,8 +99,7 @@ namespace HandShooter.Tests
                 session.player.enabled = false;
                 session.player.SetMenuOpen(true);
                 var targets = Object.FindObjectsByType<DamageTarget>(FindObjectsSortMode.None);
-                int expected = kind == BalanceScenario.Blanco || kind == BalanceScenario.Kamikazes || kind == BalanceScenario.GrupoMixto ? 3 : 1;
-                Assert.That(targets.Length, Is.EqualTo(expected), kind.ToString());
+                Assert.That(targets.Length, Is.EqualTo(count), $"{kind}: {count} enemigos");
                 Assert.That(GameObject.Find("Cobertura"), Is.Not.Null);
                 foreach (var target in targets)
                 {
