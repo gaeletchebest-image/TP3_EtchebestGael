@@ -14,7 +14,7 @@ namespace HandShooter
         [Min(1)] public int defenseBarCapacity = 3;
         [Header("Movimiento")]
         [Min(0f)] public float detectionRange = 26f;
-        [Min(0.1f)] public float moveSpeed = 2f;
+        [Min(0.1f)] public float moveSpeed = 24f;
         [Min(0.1f)] public float repathInterval = 0.5f;
         [Min(0.05f)] public float positioningTolerance = 0.65f;
 

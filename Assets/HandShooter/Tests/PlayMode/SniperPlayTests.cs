@@ -307,18 +307,37 @@ namespace HandShooter.Tests
         [UnityTest]
         public IEnumerator ApproachesWhenFarAndRetreatsWhenTooClose()
         {
-            yield return Spawn(new Vector3(0f, 1f, 25f));
-            sniper.Simulate(0.01f);
-            float start = sniper.transform.position.z;
-            yield return new WaitForSeconds(1f);
-            Assert.That(sniper.transform.position.z, Is.LessThan(start - 0.5f));
-            Assert.That(start - sniper.transform.position.z, Is.LessThan(2.5f));
+            yield return Spawn(new Vector3(0f, 1f, 36f));
+            settings.chargeDuration = 30f;
+            Vector3 start = sniper.transform.position;
+            Vector3 previous = start;
+            float left = 0f, right = 0f;
+            float elapsed = 0f;
+            while (elapsed < 1f)
+            {
+                sniper.Simulate(Time.deltaTime);
+                yield return null;
+                elapsed += Time.deltaTime;
+                Vector3 current = sniper.transform.position;
+                left += Mathf.Max(0f, previous.x - current.x);
+                right += Mathf.Max(0f, current.x - previous.x);
+                previous = current;
+            }
+            Assert.That(start.z - sniper.transform.position.z, Is.GreaterThan(14.4f));
+            Assert.That(left, Is.GreaterThan(0.5f));
+            Assert.That(right, Is.GreaterThan(0.5f));
+
             player.transform.position = sniper.transform.position + Vector3.back * 2f - Vector3.up * 0.95f;
             Physics.SyncTransforms();
-            sniper.Simulate(1f);
-            start = sniper.transform.position.z;
-            yield return new WaitForSeconds(1f);
-            Assert.That(sniper.transform.position.z, Is.GreaterThan(start + 0.5f));
+            start = sniper.transform.position;
+            elapsed = 0f;
+            while (elapsed < 0.5f)
+            {
+                sniper.Simulate(Time.deltaTime);
+                yield return null;
+                elapsed += Time.deltaTime;
+            }
+            Assert.That(sniper.transform.position.z, Is.GreaterThan(start.z + 3f));
         }
 
         [UnityTest]

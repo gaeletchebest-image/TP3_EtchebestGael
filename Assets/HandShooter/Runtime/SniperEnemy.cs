@@ -24,9 +24,10 @@ namespace HandShooter
         private Material fallbackMaterial;
         private MaterialPropertyBlock orbProperties;
         private Renderer orbRenderer;
-        private Vector3 aimDirection, plannedPosition;
+        private Vector3 aimDirection, plannedPosition, zigzagWaypoint;
         private float stateElapsed, cooldownRemaining, repathRemaining, beamRemaining;
-        private bool acquiredTarget, hasPosition;
+        private bool acquiredTarget, hasPosition, followingZigzag, retreating;
+        private float zigzagSide;
         private NavMeshPath candidatePath, bestPath;
 
         private Vector3 Origin => muzzle ? muzzle.position : transform.position + Vector3.up * 0.35f;
@@ -61,7 +62,9 @@ namespace HandShooter
             agent.height = 2f;
             agent.radius = 0.5f;
             agent.stoppingDistance = 0.12f;
+            agent.angularSpeed = 720f;
             agent.updateRotation = false;
+            zigzagSide = Random.value < 0.5f ? -1f : 1f;
             if (NavMesh.SamplePosition(transform.position - Vector3.up, out var spawn, 2f, NavMesh.AllAreas))
             {
                 transform.position = spawn.position + Vector3.up * agent.baseOffset;
@@ -99,7 +102,7 @@ namespace HandShooter
             if (!inRange || !visible)
             {
                 SetState(AttackState.Repositioning);
-                Reposition();
+                Reposition(distance);
                 UpdateWarning();
                 return;
             }
@@ -112,7 +115,7 @@ namespace HandShooter
                 if (!nearMiddle && !reachedPosition)
                 {
                     SetState(AttackState.Repositioning);
-                    Reposition();
+                    Reposition(distance);
                     UpdateWarning();
                     return;
                 }
@@ -151,20 +154,25 @@ namespace HandShooter
             IsAimLocked = false;
         }
 
-        private void Reposition()
+        private void Reposition(float distance)
         {
             if (!CanNavigate) return;
             agent.speed = Mathf.Max(0.1f, settings.moveSpeed);
+            agent.acceleration = agent.speed * 8f;
             agent.isStopped = false;
-            if (repathRemaining <= 0f)
+            bool tooClose = distance < settings.minimumAttackRange;
+            if (repathRemaining <= 0f || tooClose != retreating)
             {
+                retreating = tooClose;
                 repathRemaining = Mathf.Max(0.1f, settings.repathInterval);
-                FindFiringPosition();
+                FindFiringPosition(tooClose);
             }
+            else if (followingZigzag && HorizontalDistance(transform.position, zigzagWaypoint) <= 0.65f)
+                FollowFiringPath();
             if (agent.desiredVelocity.sqrMagnitude > 0.01f) Face(agent.desiredVelocity);
         }
 
-        private void FindFiringPosition()
+        private void FindFiringPosition(bool tooClose)
         {
             hasPosition = false;
             float bestScore = float.PositiveInfinity;
@@ -198,17 +206,80 @@ namespace HandShooter
                     hasPosition = true;
                 }
             }
-            if (hasPosition)
-            {
-                agent.CalculatePath(plannedPosition, bestPath);
-                agent.SetPath(bestPath);
-            }
+            followingZigzag = false;
+            agent.autoBraking = true;
+            if (hasPosition) FollowFiringPath();
+            else if (tooClose) RetreatFromPlayer(fromPlayer.normalized);
             else if (NavMesh.SamplePosition(target.transform.position, out var nearby, 2f, agent.areaMask))
                 agent.SetDestination(nearby.position);
+            else agent.ResetPath();
+        }
+
+        private void FollowFiringPath()
+        {
+            followingZigzag = false;
+            agent.autoBraking = true;
+            if (!agent.CalculatePath(plannedPosition, bestPath) || bestPath.status != NavMeshPathStatus.PathComplete)
+            {
+                hasPosition = false;
+                repathRemaining = 0f;
+                agent.ResetPath();
+                return;
+            }
+
+            var corners = bestPath.corners;
+            if (corners.Length >= 2)
+            {
+                Vector3 forward = corners[1] - corners[0];
+                forward.y = 0f;
+                float stride = Random.Range(3.5f, 5f);
+                if (forward.magnitude > stride + 1f)
+                {
+                    forward.Normalize();
+                    Vector3 side = Vector3.Cross(Vector3.up, forward) * zigzagSide;
+                    Vector3 probe = corners[0] + forward * stride + side * stride * Random.Range(0.3f, 0.5f);
+                    // Take a lateral step only when it can be reached directly on the mesh.
+                    if (NavMesh.SamplePosition(probe, out var waypoint, 0.5f, agent.areaMask) &&
+                        !agent.Raycast(waypoint.position, out _) && agent.CalculatePath(waypoint.position, candidatePath) &&
+                        candidatePath.status == NavMeshPathStatus.PathComplete && agent.SetPath(candidatePath))
+                    {
+                        zigzagWaypoint = waypoint.position;
+                        zigzagSide = -zigzagSide;
+                        followingZigzag = true;
+                        agent.autoBraking = false;
+                        return;
+                    }
+                }
+            }
+            agent.SetPath(bestPath);
+        }
+
+        private void RetreatFromPlayer(Vector3 away)
+        {
+            // A cramped room may have no reachable point in the attack band.
+            Vector3 start = agent.nextPosition - Vector3.up * agent.baseOffset;
+            Vector3 retreat = start;
+            float bestDistance = HorizontalDistance(start, target.transform.position);
+            for (int angle = -60; angle <= 60; angle += 30)
+            {
+                Vector3 direction = Quaternion.Euler(0f, angle, 0f) * away;
+                Vector3 probe = start + direction * 6f;
+                if (agent.Raycast(probe, out var edge)) probe = edge.position - direction * 0.25f;
+                if (!NavMesh.SamplePosition(probe, out var sample, 0.5f, agent.areaMask) ||
+                    agent.Raycast(sample.position, out _)) continue;
+                float distance = HorizontalDistance(sample.position, target.transform.position);
+                if (distance <= bestDistance) continue;
+                bestDistance = distance;
+                retreat = sample.position;
+            }
+            if (HorizontalDistance(start, retreat) > agent.stoppingDistance) agent.SetDestination(retreat);
+            else agent.ResetPath();
         }
 
         private void StopMoving()
         {
+            followingZigzag = false;
+            repathRemaining = 0f;
             if (CanNavigate) { agent.ResetPath(); agent.isStopped = true; }
         }
 
