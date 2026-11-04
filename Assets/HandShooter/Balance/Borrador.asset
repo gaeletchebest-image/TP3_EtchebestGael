@@ -173,7 +173,7 @@ MonoBehaviour:
   weapon:
     tankCapacity: 50
     fuelPerDamage: 1
-    startingSpareTanks: 2
+    startingSpareTanks: 0
     reloadDuration: 1.25
 --- !u!114 &845656784492977127
 MonoBehaviour:

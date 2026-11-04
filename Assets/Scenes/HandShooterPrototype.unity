@@ -9729,7 +9729,7 @@ MonoBehaviour:
   thumbVisual: {fileID: 2075358014}
   tankCapacity: 50
   fuelPerDamage: 1
-  startingSpareTanks: 2
+  startingSpareTanks: 0
   reloadDuration: 1.25
   reloadHandDip: 0.16
   reloadHandTilt: 32
