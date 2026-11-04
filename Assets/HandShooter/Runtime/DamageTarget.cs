@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace HandShooter
 {
@@ -52,6 +53,65 @@ namespace HandShooter
 
         private void OnDisable() => vitals?.SetVisible(false);
         private void OnDestroy() => vitals?.Destroy();
+
+        internal SavedGame.Enemy CaptureState(string id)
+        {
+            if (!body) return null; // Awake has not run on inactive scene objects.
+            var state = new SavedGame.Enemy
+            {
+                id = id, defeated = Health <= 0f, position = transform.position, rotation = transform.rotation,
+                health = Health, defensePoints = DefensePoints, defenseCapacity = DefenseBarCapacity,
+                defenseBar = DefenseBar, lastDamage = LastDamage, destroyedCount = DestroyedCount
+            };
+            if (TryGetComponent<TurretEnemy>(out var turret)) state.shotDelay = turret.ShotDelay;
+            if (TryGetComponent<KamikazeEnemy>(out var kamikaze))
+            {
+                state.acquiredTarget = kamikaze.HasAcquiredTarget;
+                state.defeated |= kamikaze.HasDetonated;
+            }
+            if (TryGetComponent<HunterEnemy>(out var hunter)) state.hunter = hunter.CaptureState();
+            if (TryGetComponent<SniperEnemy>(out var sniper)) state.sniper = sniper.CaptureState();
+            if (TryGetComponent<NavMeshAgent>(out var agent) && agent.enabled && agent.isOnNavMesh)
+            {
+                state.navigation = new SavedGame.Navigation
+                {
+                    hasDestination = agent.hasPath || agent.pathPending, destination = agent.destination,
+                    stopped = agent.isStopped, speed = agent.speed, acceleration = agent.acceleration,
+                    autoBraking = agent.autoBraking
+                };
+            }
+            return state;
+        }
+
+        internal void RestoreState(SavedGame.Enemy state)
+        {
+            Health = state.health;
+            LastDamage = state.lastDamage;
+            DestroyedCount = state.destroyedCount;
+            defense = new EnemyDefense(state.defensePoints, state.defenseCapacity, state.defenseBar);
+
+            if (TryGetComponent<NavMeshAgent>(out var agent) && agent.enabled && agent.isOnNavMesh)
+            {
+                agent.Warp(state.position - Vector3.up * agent.baseOffset);
+                if (state.navigation != null)
+                {
+                    var nav = state.navigation;
+                    agent.speed = nav.speed;
+                    agent.acceleration = nav.acceleration;
+                    agent.autoBraking = nav.autoBraking;
+                    agent.isStopped = nav.stopped;
+                    if (nav.hasDestination) agent.SetDestination(nav.destination);
+                }
+            }
+            else transform.position = state.position;
+            transform.rotation = state.rotation;
+
+            if (TryGetComponent<TurretEnemy>(out var turret)) turret.ShotDelay = state.shotDelay;
+            if (TryGetComponent<KamikazeEnemy>(out var kamikaze)) kamikaze.HasAcquiredTarget = state.acquiredTarget;
+            if (state.hunter != null && TryGetComponent<HunterEnemy>(out var hunter)) hunter.RestoreState(state.hunter);
+            if (state.sniper != null && TryGetComponent<SniperEnemy>(out var sniper)) sniper.RestoreState(state.sniper);
+            RefreshLabel();
+        }
 
         private void LateUpdate()
         {

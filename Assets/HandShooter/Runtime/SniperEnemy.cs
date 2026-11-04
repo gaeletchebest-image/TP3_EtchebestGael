@@ -74,7 +74,39 @@ namespace HandShooter
             CreateVisuals();
         }
 
-        private void Update() => Simulate(Time.deltaTime);
+        private void Update()
+        {
+            if (Time.timeScale > 0f) Simulate(Time.deltaTime);
+        }
+
+        internal SavedGame.Sniper CaptureState() => new SavedGame.Sniper
+        {
+            state = State, chargeProgress = ChargeProgress, aimLocked = IsAimLocked, shotsFired = ShotsFired,
+            aimDirection = aimDirection, plannedPosition = plannedPosition, zigzagWaypoint = zigzagWaypoint,
+            stateElapsed = stateElapsed, cooldownRemaining = cooldownRemaining, repathRemaining = repathRemaining,
+            acquiredTarget = acquiredTarget, hasPosition = hasPosition, followingZigzag = followingZigzag,
+            retreating = retreating, zigzagSide = zigzagSide
+        };
+
+        internal void RestoreState(SavedGame.Sniper saved)
+        {
+            State = saved.state;
+            ChargeProgress = saved.chargeProgress;
+            IsAimLocked = saved.aimLocked;
+            ShotsFired = saved.shotsFired;
+            aimDirection = saved.aimDirection;
+            plannedPosition = saved.plannedPosition;
+            zigzagWaypoint = saved.zigzagWaypoint;
+            stateElapsed = saved.stateElapsed;
+            cooldownRemaining = saved.cooldownRemaining;
+            repathRemaining = saved.repathRemaining;
+            acquiredTarget = saved.acquiredTarget;
+            hasPosition = saved.hasPosition;
+            followingZigzag = saved.followingZigzag;
+            retreating = saved.retreating;
+            zigzagSide = saved.zigzagSide;
+            if (settings && target) UpdateWarning();
+        }
 
         public void Simulate(float deltaTime)
         {

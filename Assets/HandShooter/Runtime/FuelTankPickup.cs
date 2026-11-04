@@ -12,6 +12,7 @@ namespace HandShooter
         [Min(0f)] public float hoverAmplitude = 0.2f;
         [Min(0.01f)] public float hoverFrequency = 1.5f;
         [Min(0f)] public float rotationSpeed = 70f;
+        internal bool IsCollected { get; private set; }
 
         private void Awake()
         {
@@ -65,7 +66,8 @@ namespace HandShooter
         private void OnTriggerEnter(Collider other)
         {
             PrototypePlayer player = other.GetComponentInParent<PrototypePlayer>();
-            if (!player || !player.weapon) return;
+            if (IsCollected || !player || !player.weapon || player.IsDead) return;
+            IsCollected = true;
             player.weapon.AddFuelTank(tanksGranted);
             Destroy(gameObject);
         }

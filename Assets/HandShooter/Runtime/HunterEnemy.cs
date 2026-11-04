@@ -79,7 +79,28 @@ namespace HandShooter
             UpdateStatus();
         }
 
-        private void Update() => Simulate(Time.deltaTime);
+        private void Update()
+        {
+            if (Time.timeScale > 0f) Simulate(Time.deltaTime);
+        }
+
+        internal SavedGame.Hunter CaptureState() => new SavedGame.Hunter
+        {
+            state = State, alerted = IsAlerted, shotsFired = ShotsFired,
+            repathRemaining = repathRemaining, patrolWaitRemaining = patrolWaitRemaining,
+            hasPatrolDestination = hasPatrolDestination
+        };
+
+        internal void RestoreState(SavedGame.Hunter saved)
+        {
+            State = saved.state;
+            IsAlerted = saved.alerted;
+            ShotsFired = saved.shotsFired;
+            repathRemaining = saved.repathRemaining;
+            patrolWaitRemaining = saved.patrolWaitRemaining;
+            hasPatrolDestination = saved.hasPatrolDestination;
+            UpdateStatus();
+        }
 
         public void Simulate(float deltaTime)
         {

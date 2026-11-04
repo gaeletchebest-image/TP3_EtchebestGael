@@ -53,6 +53,24 @@ namespace HandShooter
 
         private Vector3 PanelPosition => transform.TransformPoint(Vector3.Lerp(closedPosition, openPosition, openness));
 
+        internal SavedGame.Door CaptureState(string id) => new SavedGame.Door
+        {
+            id = id, open = openRequested, openness = openness, startOpenness = startOpenness, progress = progress
+        };
+
+        internal void RestoreState(SavedGame.Door state)
+        {
+            openRequested = state.open;
+            openness = state.openness;
+            startOpenness = state.startOpenness;
+            progress = state.progress;
+            if (!panel) return;
+            // Keep the interpolated transform and its Rigidbody in sync before restoring physics.
+            Vector3 position = PanelPosition;
+            panel.transform.position = position;
+            panel.position = position;
+        }
+
         private void FixedUpdate()
         {
             if (progress >= 1f) return;

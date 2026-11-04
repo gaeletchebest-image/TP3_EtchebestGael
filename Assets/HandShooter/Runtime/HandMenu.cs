@@ -44,11 +44,7 @@ namespace HandShooter
                 return;
             }
             ui = canvas.transform;
-            if (!EventSystem.current)
-            {
-                var events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
-                events.GetComponent<InputSystemUIInputModule>().AssignDefaultActions();
-            }
+            EnsureEventSystem();
             if (!fuelFill || !fuelFillRect || !fuelLabel || !tankLabel || !debugPanel || !debugText)
             {
                 Debug.LogError("Assign the fuel HUD and debug panel references on HandMenu in the Inspector.", this);
@@ -57,6 +53,12 @@ namespace HandShooter
             }
             if (crosshair) crosshair.text = "+";
             BuildMenu();
+        }
+        internal static void EnsureEventSystem()
+        {
+            if (EventSystem.current) return;
+            var events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+            events.GetComponent<InputSystemUIInputModule>().AssignDefaultActions();
         }
         private void BuildMenu()
         {
@@ -125,7 +127,7 @@ namespace HandShooter
         private void LateUpdate()
         {
             if (!MenuRoot || weapon.Hand == null) return;
-            MenuRoot.SetActive(player.IsMenuOpen);
+            MenuRoot.SetActive(player.IsMenuOpen && !player.IsPauseMenuOpen);
             if (debugPanel.activeSelf != showDebugStats) debugPanel.SetActive(showDebugStats);
             var stats = weapon.Stats;
             var hand = weapon.Hand;
@@ -149,7 +151,7 @@ namespace HandShooter
             debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.settings.EvaluateFuelCost(stats, weapon.fuelPerDamage):0.##} COMBUSTIBLE / DISPARO";
             if (!stats.Hitscan) debugText.text += $"\nÁREA {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
             if (hitText) hitText.text = Time.time - weapon.LastHitTime < 0.5f ? $"IMPACTO  -{weapon.LastHitDamage:0.##}" : "";
-            if (!player.IsMenuOpen) return;
+            if (!MenuRoot.activeSelf) return;
             for (int digit = 0; digit < HandPresetStore.SlotCount; digit++)
             {
                 HandPreset preset = weapon.Presets.Get(digit);

@@ -15,6 +15,7 @@ namespace HandShooter
         public GameObject deathScreen;
         public Text deathHint;
         public bool IsMenuOpen { get; private set; }
+        internal bool IsPauseMenuOpen { get; private set; }
         public bool IsDead { get; private set; }
         public bool spawnDefaultFuelPickups = true;
         public event System.Action<string> Died;
@@ -29,11 +30,23 @@ namespace HandShooter
         private EnemyInspection inspection;
         private DamageTarget pinnedEnemy;
         private bool waitForControlRelease;
-        private void Awake() { controller = GetComponent<CharacterController>(); }
-        private void Start() { SetMenuOpen(false); if (spawnDefaultFuelPickups) FuelTankPickup.SpawnDefaultPickups(transform); }
+        private PauseMenu pauseMenu;
+        private void Awake()
+        {
+            controller = GetComponent<CharacterController>();
+            if (GameSaveSession.CanSaveScene(gameObject.scene))
+                pauseMenu = gameObject.AddComponent<PauseMenu>();
+        }
+        private void Start()
+        {
+            bool restoring = GameSaveSession.IsPendingFor(gameObject.scene);
+            SetMenu(restoring, pause: restoring);
+            if (spawnDefaultFuelPickups) FuelTankPickup.SpawnDefaultPickups(transform);
+        }
         private void Update()
         {
             var keyboard = Keyboard.current;
+            if (pauseMenu && pauseMenu.IsLoading) return;
             if (IsControlHeld(keyboard) && keyboard.rKey.wasPressedThisFrame)
             {
                 RestartScene();
@@ -46,8 +59,10 @@ namespace HandShooter
                 return;
             }
             if (!settings || !viewCamera) return;
-            if (keyboard != null && (keyboard[settings.menuKey].wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
-                SetMenuOpen(!IsMenuOpen);
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && pauseMenu)
+                SetMenu(!IsPauseMenuOpen, pause: true);
+            else if (keyboard != null && (keyboard[settings.menuKey].wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
+                SetMenuOpen(!IsMenuOpen || IsPauseMenuOpen);
             viewCamera.fieldOfView = settings.fieldOfView;
             if (IsMenuOpen || Cursor.lockState != CursorLockMode.Locked) return;
             dashCooldownRemaining = Mathf.Max(0f, dashCooldownRemaining - Time.deltaTime);
@@ -144,12 +159,36 @@ namespace HandShooter
         private static bool CanInspect(DamageTarget target) =>
             target && target.isActiveAndEnabled && target.IsEnemy && target.Health > 0f;
 
-        public void SetMenuOpen(bool open)
+        internal SavedGame.Player CaptureState() => new SavedGame.Player
+        {
+            position = transform.position, rotation = transform.rotation, pitch = pitch,
+            verticalVelocity = verticalVelocity, dashDirection = dashDirection, dashRemaining = dashRemaining,
+            dashCooldown = dashCooldownRemaining, weapon = weapon.CaptureState()
+        };
+
+        internal void RestoreState(SavedGame.Player state)
+        {
+            controller.enabled = false;
+            transform.SetPositionAndRotation(state.position, state.rotation);
+            controller.enabled = true;
+            pitch = state.pitch;
+            viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            verticalVelocity = state.verticalVelocity;
+            dashDirection = state.dashDirection;
+            dashRemaining = state.dashRemaining;
+            dashCooldownRemaining = state.dashCooldown;
+            weapon.RestoreState(state.weapon);
+        }
+
+        public void SetMenuOpen(bool open) => SetMenu(open, pause: false);
+
+        private void SetMenu(bool open, bool pause)
         {
             if (IsDead) return;
             if (open && !IsMenuOpen) { previousTimeScale = Time.timeScale; Time.timeScale = 0f; }
             if (!open && IsMenuOpen) Time.timeScale = previousTimeScale;
             IsMenuOpen = open;
+            IsPauseMenuOpen = open && pause;
             Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = open;
             if (weapon) weapon.RequireTriggerRelease();
@@ -162,6 +201,7 @@ namespace HandShooter
             inspection?.Hide();
             Died?.Invoke(cause);
             IsMenuOpen = false;
+            IsPauseMenuOpen = false;
             Time.timeScale = 0f;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -174,7 +214,11 @@ namespace HandShooter
             Time.timeScale = 1f;
             SceneManager.LoadScene(SceneManager.GetActiveScene().path);
         }
-        private void OnApplicationFocus(bool focused) { if (!focused && Application.isPlaying && !IsDead) SetMenuOpen(true); }
+        private void OnApplicationFocus(bool focused)
+        {
+            if (!focused && Application.isPlaying && !IsDead && !IsMenuOpen)
+                SetMenu(true, pause: pauseMenu != null);
+        }
         private void OnDisable()
         {
             pinnedEnemy = null;

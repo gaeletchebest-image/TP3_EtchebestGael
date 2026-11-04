@@ -12,10 +12,13 @@ namespace HandShooter
         public float DamageMultiplier => Mathf.Pow(0.5f, Points);
 
         public EnemyDefense(int points, int capacity)
+            : this(points, capacity, capacity) { }
+
+        internal EnemyDefense(int points, int capacity, int bar)
         {
             Points = Mathf.Max(0, points);
             Capacity = Mathf.Max(1, capacity);
-            Bar = Points > 0 ? Capacity : 0;
+            Bar = Points > 0 ? Mathf.Clamp(bar, 1, Capacity) : 0;
         }
 
         public void RegisterPlayerHit()

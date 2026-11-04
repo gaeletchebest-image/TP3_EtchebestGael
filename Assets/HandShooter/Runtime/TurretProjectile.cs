@@ -21,6 +21,7 @@ namespace HandShooter
         }
         private void Update()
         {
+            if (Time.timeScale <= 0f) return;
             float distance = speed * Mathf.Min(Time.deltaTime, life);
             foreach (var hit in Physics.SphereCastAll(transform.position, radius, direction, distance, mask, QueryTriggerInteraction.Ignore))
             {

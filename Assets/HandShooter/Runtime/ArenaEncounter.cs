@@ -14,8 +14,9 @@ namespace HandShooter
         [Tooltip("Scene enemies that must be defeated to clear this encounter.")]
         [SerializeField] private DamageTarget[] enemies = Array.Empty<DamageTarget>();
 
-        private enum EncounterState { Waiting, Fighting, Cleared }
+        internal enum EncounterState { Waiting, Fighting, Cleared }
         private EncounterState state;
+        internal EncounterState State { get => state; set => state = value; }
 
         private void Awake()
         {
@@ -43,7 +44,7 @@ namespace HandShooter
 
         private void Update()
         {
-            if (state == EncounterState.Fighting) TryClear();
+            if (Time.timeScale > 0f && state == EncounterState.Fighting) TryClear();
         }
 
         private bool TryClear()

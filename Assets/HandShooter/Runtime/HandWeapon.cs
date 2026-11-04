@@ -45,6 +45,7 @@ namespace HandShooter
         private float cooldownFraction;
         private bool requireRelease;
         private float recoil;
+        private float reloadElapsed;
         private Vector3 handRestPosition;
         private Quaternion handRestRotation;
         private Camera handCamera;
@@ -113,7 +114,7 @@ namespace HandShooter
         public void RequireTriggerRelease() { requireRelease = true; }
         public bool SavePreset(int digit)
         {
-            if (player.IsDead || !player.IsMenuOpen || !Presets.Save(digit, Hand)) return false;
+            if (player.IsDead || !player.IsMenuOpen || player.IsPauseMenuOpen || !Presets.Save(digit, Hand)) return false;
             PresetSaved?.Invoke(digit);
             return true;
         }
@@ -210,26 +211,43 @@ namespace HandShooter
         private bool BeginReloadFuel()
         {
             if (IsReloading || SpareTankCount <= 0 || Fuel >= tankCapacity) return false;
-            StartCoroutine(ReloadFuelAnimation());
+            StartCoroutine(ReloadFuelAnimation(0f));
             return true;
         }
-        private System.Collections.IEnumerator ReloadFuelAnimation()
+        private System.Collections.IEnumerator ReloadFuelAnimation(float elapsed)
         {
             IsReloading = true;
             float duration = Mathf.Max(0.1f, reloadDuration);
-            float elapsed = 0f;
-            while (elapsed < duration)
+            reloadElapsed = elapsed;
+            while (reloadElapsed < duration)
             {
-                elapsed = Mathf.Min(duration, elapsed + Time.deltaTime);
-                float dip = Mathf.Sin((elapsed / duration) * Mathf.PI);
+                float dip = Mathf.Sin((reloadElapsed / duration) * Mathf.PI);
                 transform.localPosition = handRestPosition + Vector3.down * (reloadHandDip * dip);
                 transform.localRotation = handRestRotation * Quaternion.Euler(reloadHandTilt * dip, 0f, -5f * dip);
                 yield return null;
+                if (!player.IsMenuOpen) reloadElapsed += Time.deltaTime;
             }
             transform.localPosition = handRestPosition;
             transform.localRotation = handRestRotation;
             IsReloading = false;
             ReloadFuel();
+        }
+
+        internal SavedGame.Weapon CaptureState() => new SavedGame.Weapon
+        {
+            fuel = Fuel, spareTanks = SpareTankCount, mask = Hand.ActiveMask, thumb = Hand.ThumbActive,
+            cooldown = cooldownFraction, reloading = IsReloading, reloadElapsed = reloadElapsed
+        };
+
+        internal void RestoreState(SavedGame.Weapon state)
+        {
+            Hand.TryApply(state.mask, state.thumb);
+            Fuel = Mathf.Clamp(state.fuel, 0f, tankCapacity);
+            SpareTankCount = Mathf.Max(0, state.spareTanks);
+            cooldownFraction = Mathf.Clamp01(state.cooldown);
+            if (state.reloading) StartCoroutine(ReloadFuelAnimation(state.reloadElapsed));
+            RequireTriggerRelease();
+            FuelChanged?.Invoke();
         }
         public void AddFuelTank(int count = 1)
         {

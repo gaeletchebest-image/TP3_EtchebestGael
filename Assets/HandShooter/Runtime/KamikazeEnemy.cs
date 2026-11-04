@@ -12,6 +12,8 @@ namespace HandShooter
         private DamageTarget damageTarget;
         private bool hasAcquiredTarget;
         private bool hasDetonated;
+        internal bool HasAcquiredTarget { get => hasAcquiredTarget; set => hasAcquiredTarget = value; }
+        internal bool HasDetonated => hasDetonated;
 
         private void Awake()
         {
@@ -25,7 +27,7 @@ namespace HandShooter
 
         private void Update()
         {
-            if (!settings || !target || hasDetonated || damageTarget.Health <= 0f) return;
+            if (Time.timeScale <= 0f || !settings || !target || target.IsDead || hasDetonated || damageTarget.Health <= 0f) return;
 
             Vector3 toTarget = target.transform.position - transform.position;
             toTarget.y = 0f;

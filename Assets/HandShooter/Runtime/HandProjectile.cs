@@ -56,7 +56,10 @@ namespace HandShooter
             initialized = true;
             if (FindImpact(Vector3.zero, out var impact)) Detonate(impact.Collider, impact.Point, impact.Normal);
         }
-        private void Update() { if (initialized) Simulate(Time.deltaTime); }
+        private void Update()
+        {
+            if (Time.timeScale > 0f) Simulate(Time.deltaTime);
+        }
         public void Simulate(float deltaTime)
         {
             if (!initialized || deltaTime <= 0f) return;

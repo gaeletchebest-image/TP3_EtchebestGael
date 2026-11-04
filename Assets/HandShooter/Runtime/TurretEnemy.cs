@@ -10,6 +10,11 @@ namespace HandShooter
         public Transform muzzle;
         public PrototypePlayer target;
         private float nextShot;
+        internal float ShotDelay
+        {
+            get => Mathf.Max(0f, nextShot - Time.time);
+            set => nextShot = Time.time + value;
+        }
         private void OnDrawGizmosSelected()
         {
             if (!settings) return;
@@ -23,7 +28,7 @@ namespace HandShooter
         }
         private void Update()
         {
-            if (!settings || !target || GetComponent<DamageTarget>().Health <= 0f) return;
+            if (Time.timeScale <= 0f || !settings || !target || target.IsDead || GetComponent<DamageTarget>().Health <= 0f) return;
             Vector3 aim = target.viewCamera ? target.viewCamera.transform.position : target.transform.position + Vector3.up;
             if ((aim - transform.position).sqrMagnitude > settings.detectionRange * settings.detectionRange) return;
             Vector3 origin = muzzle ? muzzle.position : transform.position;
