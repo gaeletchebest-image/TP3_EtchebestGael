@@ -9727,7 +9727,7 @@ MonoBehaviour:
   - {fileID: 527352408}
   - {fileID: 2118103281}
   thumbVisual: {fileID: 2075358014}
-  tankCapacity: 100
+  tankCapacity: 50
   fuelPerDamage: 1
   startingSpareTanks: 2
   reloadDuration: 1.25

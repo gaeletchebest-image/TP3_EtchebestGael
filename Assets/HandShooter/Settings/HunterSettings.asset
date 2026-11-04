@@ -17,9 +17,9 @@ MonoBehaviour:
   defenseBarCapacity: 3
   range: 5
   patrolRadius: 6
-  patrolSpeed: 2
-  patrolWaitMin: 1
-  patrolWaitMax: 3
+  patrolSpeed: 12
+  patrolWaitMin: 0.5
+  patrolWaitMax: 1.5
   chaseSpeed: 12
   acceleration: 60
   repathInterval: 0.1

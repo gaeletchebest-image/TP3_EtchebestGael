@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a73f82fdcff0c042aa5bd39ba59c8f8, type: 3}
   m_Name: TurretSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.TurretSettings
-  initialHealth: 24
-  initialDefensePoints: 1
-  defenseBarCapacity: 3
+  initialHealth: 8
+  initialDefensePoints: 2
+  defenseBarCapacity: 6
   detectionRange: 15
   fireInterval: 1
-  projectileSpeed: 18
-  projectileRadius: 0.12
+  projectileSpeed: 12
+  projectileRadius: 0.2
   projectileLifetime: 5
   projectileColor: {r: 1, g: 0, b: 0, a: 1}
   hitMask:

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83d8b709657f4d739d9ab04d1b7930fc, type: 3}
   m_Name: KamikazeSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.KamikazeSettings
-  initialHealth: 18
+  initialHealth: 8
   initialDefensePoints: 0
   defenseBarCapacity: 3
   detectionRange: 18
