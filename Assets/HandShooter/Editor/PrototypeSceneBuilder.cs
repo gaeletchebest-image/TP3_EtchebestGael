@@ -119,7 +119,7 @@ namespace HandShooter.Editor
                 Cube("Target post", new Vector3(pos.x, 0.8f, pos.z), new Vector3(0.12f, 1.6f, 0.12f), wall, arena);
                 var target = Cube("Target " + (i + 1), pos, i < 3 ? new Vector3(1.25f, 1.6f, 0.35f) : new Vector3(0.7f, 1.2f, 0.35f), targetMat, arena);
                 var health = target.AddComponent<DamageTarget>(); health.settings = settings;
-                health.label = WorldText("32 / 32", pos + new Vector3(0, 1.2f, -0.25f), 0.04f, Color.white, arena);
+                health.label = WorldText("", pos + new Vector3(0, 1.2f, -0.25f), 0.04f, Color.white, arena);
                 WorldText($"0{i + 1} / {pos.z:0} m", pos + new Vector3(0, -1.35f, -0.85f), 0.025f, Color.white, arena);
             }
             var playerObject = new GameObject("Player"); playerObject.layer = 2;
@@ -263,6 +263,8 @@ namespace HandShooter.Editor
         private static void ConfigureTurretVisuals(TurretEnemy turret)
         {
             var body = turret.gameObject;
+            turret.projectileMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/HandShooter/Materials/Projectile.mat");
+            EditorUtility.SetDirty(turret);
             body.transform.localScale = new Vector3(1.25f, 1.6f, 0.35f);
             var red = Material("Turret", new Color(0.85f, 0.08f, 0.1f));
             red.SetColor("_BaseColor", new Color(0.85f, 0.08f, 0.1f));
@@ -285,8 +287,7 @@ namespace HandShooter.Editor
                     0.04f, Color.white, null);
             health.label.name = "Turret Health";
             health.label.transform.SetParent(body.transform, true);
-            if (turret.settings)
-                health.label.text = $"{turret.settings.initialHealth:0.#} / {turret.settings.initialHealth:0.#}";
+            health.label.text = "";
             EditorUtility.SetDirty(health);
             EditorSceneManager.MarkSceneDirty(body.scene);
         }
@@ -419,8 +420,7 @@ namespace HandShooter.Editor
                     0.035f, Color.white, null);
             health.label.name = "Kamikaze Health";
             health.label.transform.SetParent(body.transform, true);
-            if (kamikaze.settings)
-                health.label.text = $"{kamikaze.settings.initialHealth:0.#} / {kamikaze.settings.initialHealth:0.#}";
+            health.label.text = "";
             EditorUtility.SetDirty(health);
             EditorSceneManager.MarkSceneDirty(body.scene);
         }

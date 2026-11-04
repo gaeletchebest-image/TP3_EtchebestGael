@@ -30,15 +30,37 @@ namespace HandShooter
         private Color originalColor;
         private MaterialPropertyBlock properties;
         private EnemyDefense defense;
-        private EnemyDefenseDisplay defenseDisplay;
+        private EnemyVitalsDisplay vitals;
+        private TextMesh statusLabel;
+        private bool IsEnemy => turretSettings || kamikazeSettings || sniperSettings || hunterSettings;
+
         private void Awake()
         {
             body = GetComponent<Renderer>();
             hitCollider = GetComponent<Collider>();
             originalColor = body.sharedMaterial.GetColor("_BaseColor");
             properties = new MaterialPropertyBlock();
+            if (IsEnemy)
+            {
+                if (TryGetComponent<HunterEnemy>(out var hunter)) statusLabel = hunter.statusLabel;
+                if (TryGetComponent<SniperEnemy>(out var sniper)) statusLabel = sniper.statusLabel;
+                vitals = new EnemyVitalsDisplay(this, statusLabel);
+            }
             ResetTarget();
         }
+
+        private void OnDisable() => vitals?.SetVisible(false);
+        private void OnDestroy() => vitals?.Destroy();
+
+        private void LateUpdate()
+        {
+            if (vitals == null || Health <= 0f) return;
+            Bounds bounds = body.bounds;
+            Vector3 anchor = new Vector3(bounds.center.x, bounds.max.y + 0.25f, bounds.center.z);
+            if (label) anchor.y = Mathf.Max(anchor.y, label.transform.position.y);
+            vitals.Place(anchor, Camera.main, statusLabel);
+        }
+
         public bool TakeDamage(float amount) => ApplyDamage(amount, false);
         public bool TakePlayerShotDamage(float amount) => ApplyDamage(amount, true);
 
@@ -54,7 +76,13 @@ namespace HandShooter
             if (Health <= 0)
             {
                 DestroyedCount++;
-                if (turretSettings || kamikazeSettings || sniperSettings || hunterSettings) { body.enabled = hitCollider.enabled = false; Destroy(gameObject); return true; }
+                if (IsEnemy)
+                {
+                    vitals?.SetVisible(false);
+                    body.enabled = hitCollider.enabled = false;
+                    Destroy(gameObject);
+                    return true;
+                }
                 respawnAt = Time.time + settings.targetRespawnDelay;
                 body.enabled = hitCollider.enabled = false;
             }
@@ -80,9 +108,7 @@ namespace HandShooter
         private void RefreshLabel()
         {
             if (label) label.text = Health <= 0 ? "DESTRUIDO" : $"{Health:0.#} / {InitialHealth:0.#}" + (LastDamage > 0 ? $"\n-{LastDamage:0.#}" : "");
-            if (!defenseDisplay && label && DefensePoints > 0 && Health > 0f)
-                defenseDisplay = EnemyDefenseDisplay.Create(label);
-            if (defenseDisplay) defenseDisplay.Refresh(DefensePoints, DefenseBar, DefenseBarCapacity, Health > 0f);
+            vitals?.Refresh(Health, InitialHealth, LastDamage, defense);
         }
     }
 }

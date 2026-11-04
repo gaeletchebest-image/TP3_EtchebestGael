@@ -1,8 +1,10 @@
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace HandShooter.Tests
 {
@@ -130,12 +132,19 @@ namespace HandShooter.Tests
         {
             enemySettings.initialDefensePoints = 1;
             var target = Target(Vector3.forward, true);
-            var display = target.GetComponentInChildren<EnemyDefenseDisplay>();
+            var display = arena.GetRootGameObjects()
+                .Select(root => root.GetComponentInChildren<EnemyDefenseDisplay>(true))
+                .Single(component => component != null);
+            var vitals = display.transform.parent;
+            var healthFill = vitals.Find("Health Bar/Health Fill").GetComponent<RectTransform>();
+            var healthText = vitals.Find("Health Points").GetComponent<Text>();
             Assert.That(display, Is.Not.Null);
             Assert.That(display.gameObject.activeSelf, Is.True);
             weapon.Damage(target, 1f);
             var fill = display.transform.Find("Defense Bar/Defense Fill").GetComponent<RectTransform>();
             Assert.That(fill.sizeDelta.x, Is.EqualTo(70f));
+            Assert.That(healthFill.sizeDelta.x, Is.EqualTo(139.3f).Within(0.001f));
+            Assert.That(healthText.text, Is.EqualTo($"{99.5f:0.#} / 100"));
             weapon.Damage(target, 1f);
             Assert.That(display.gameObject.activeSelf, Is.False);
             Assert.That(target.label.text, Does.Not.Contain("DEF"));
@@ -145,6 +154,8 @@ namespace HandShooter.Tests
             Assert.That(target.Health, Is.EqualTo(100f));
             Assert.That(display.gameObject.activeSelf, Is.True);
             Assert.That(fill.sizeDelta.x, Is.EqualTo(140f));
+            Assert.That(healthFill.sizeDelta.x, Is.EqualTo(140f));
+            Assert.That(healthText.text, Is.EqualTo("100 / 100"));
         }
 
         [Test] public void ProjectileImpactAndSplashCountOncePerEnemyEvenWithMultipleColliders()

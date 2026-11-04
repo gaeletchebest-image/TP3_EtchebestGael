@@ -180,7 +180,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2959838226457019685}
-  m_Text: SNIPER
+  m_Text: ''
   m_OffsetZ: 0
   m_CharacterSize: 0.025
   m_LineSpacing: 1
@@ -554,7 +554,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7822800394430950951}
-  m_Text: 20 / 20
+  m_Text: ''
   m_OffsetZ: 0
   m_CharacterSize: 0.03
   m_LineSpacing: 1

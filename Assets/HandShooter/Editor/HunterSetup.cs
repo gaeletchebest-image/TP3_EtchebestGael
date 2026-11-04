@@ -73,9 +73,8 @@ namespace HandShooter.Editor
             hunter.muzzle = new GameObject("Muzzle").transform;
             hunter.muzzle.SetParent(body.transform, false);
             hunter.muzzle.localPosition = new Vector3(0f, 0.35f, 0.8f);
-            health.label = Label("Hunter Health", body.transform, new Vector3(0f, 1.55f, 0f),
-                $"{settings.initialHealth:0.#} / {settings.initialHealth:0.#}", 0.03f);
-            hunter.statusLabel = Label("Hunter State", body.transform, new Vector3(0f, 1.85f, 0f), "NORMAL", 0.025f);
+            health.label = Label("Hunter Health", body.transform, new Vector3(0f, 1.55f, 0f), 0.03f);
+            hunter.statusLabel = Label("Hunter State", body.transform, new Vector3(0f, 1.85f, 0f), 0.025f);
             hunter.statusLabel.color = settings.normalColor;
             body.SetActive(true);
             var prefab = PrefabUtility.SaveAsPrefabAsset(body, PrefabPath);
@@ -98,13 +97,13 @@ namespace HandShooter.Editor
             return go.transform;
         }
 
-        private static TextMesh Label(string name, Transform parent, Vector3 position, string text, float size)
+        private static TextMesh Label(string name, Transform parent, Vector3 position, float size)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = position;
             var label = go.AddComponent<TextMesh>();
-            label.text = text;
+            label.text = "";
             label.fontSize = 72;
             label.characterSize = size;
             label.anchor = TextAnchor.MiddleCenter;

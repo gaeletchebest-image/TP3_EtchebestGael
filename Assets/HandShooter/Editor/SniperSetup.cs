@@ -61,9 +61,8 @@ namespace HandShooter.Editor
             sniper.chargeOrb = Part("Charge orb", PrimitiveType.Sphere, sniper.muzzle, Vector3.zero,
                 Vector3.one * 0.12f, glow);
             sniper.chargeOrb.gameObject.SetActive(false);
-            health.label = Label("Sniper Health", body.transform, new Vector3(0f, 1.95f, 0f),
-                $"{settings.initialHealth:0.#} / {settings.initialHealth:0.#}", 0.03f);
-            sniper.statusLabel = Label("Sniper State", body.transform, new Vector3(0f, 2.2f, 0f), "SNIPER", 0.025f);
+            health.label = Label("Sniper Health", body.transform, new Vector3(0f, 1.95f, 0f), 0.03f);
+            sniper.statusLabel = Label("Sniper State", body.transform, new Vector3(0f, 2.2f, 0f), 0.025f);
             var prefab = PrefabUtility.SaveAsPrefabAsset(body, PrefabPath);
             Object.DestroyImmediate(body);
             AssetDatabase.SaveAssets();
@@ -84,13 +83,13 @@ namespace HandShooter.Editor
             return go.transform;
         }
 
-        private static TextMesh Label(string name, Transform parent, Vector3 position, string text, float size)
+        private static TextMesh Label(string name, Transform parent, Vector3 position, float size)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = position;
             var label = go.AddComponent<TextMesh>();
-            label.text = text;
+            label.text = "";
             label.fontSize = 72;
             label.characterSize = size;
             label.anchor = TextAnchor.MiddleCenter;

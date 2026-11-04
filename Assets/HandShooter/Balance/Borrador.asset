@@ -39,12 +39,12 @@ MonoBehaviour:
   initialHealth: 9
   initialDefensePoints: 1
   defenseBarCapacity: 3
-  detectionRange: 26
-  moveSpeed: 4
+  detectionRange: 25
+  moveSpeed: 6
   repathInterval: 0.5
   positioningTolerance: 0.65
-  minimumAttackRange: 7
-  maximumAttackRange: 19
+  minimumAttackRange: 15
+  maximumAttackRange: 25
   settleDuration: 0.4
   chargeDuration: 1.2
   aimLockDuration: 0.35

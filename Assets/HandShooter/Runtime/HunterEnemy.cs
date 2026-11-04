@@ -307,9 +307,6 @@ namespace HandShooter
                     State == BehaviourState.Patrolling ? "PATRULLANDO" : State == BehaviourState.Waiting ? "ESPERANDO" : "NORMAL";
                 statusLabel.color = color;
             }
-            if (!target || !target.viewCamera) return;
-            if (statusLabel) statusLabel.transform.rotation = target.viewCamera.transform.rotation;
-            if (health.label) health.label.transform.rotation = target.viewCamera.transform.rotation;
         }
 
         private void OnDisable()

@@ -1971,7 +1971,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 304497273}
-  m_Text: 32 / 32
+  m_Text: 
   m_OffsetZ: 0
   m_CharacterSize: 0.03
   m_LineSpacing: 1
@@ -2051,7 +2051,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &313967567
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3097,7 +3097,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 439656647}
-  m_Text: 32 / 32
+  m_Text: 
   m_OffsetZ: 0
   m_CharacterSize: 0.04
   m_LineSpacing: 1
@@ -4093,7 +4093,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 588201019}
-  m_Text: 32 / 32
+  m_Text: 
   m_OffsetZ: 0
   m_CharacterSize: 0.04
   m_LineSpacing: 1
@@ -4445,7 +4445,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 674061452}
-  m_Text: 32 / 32
+  m_Text: 
   m_OffsetZ: 0
   m_CharacterSize: 0.04
   m_LineSpacing: 1
@@ -6121,7 +6121,7 @@ MonoBehaviour:
   hitText: {fileID: 760887148}
   dashCooldownFill: {fileID: 1900000007}
   debugPanel: {fileID: 313967566}
-  showDebugStats: 1
+  showDebugStats: 0
 --- !u!4 &890253519
 Transform:
   m_ObjectHideFlags: 0
@@ -10041,7 +10041,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1516934002}
-  m_Text: 32 / 32
+  m_Text: 
   m_OffsetZ: 0
   m_CharacterSize: 0.03
   m_LineSpacing: 1

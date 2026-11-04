@@ -355,9 +355,7 @@ namespace HandShooter
                 statusLabel.text = State == AttackState.Charging ? (IsAimLocked ? "¡FIJADO!" : $"CARGANDO {ChargeProgress:P0}") :
                     State == AttackState.Settling ? "COLOCÁNDOSE" : State == AttackState.Recovering ? "RECARGANDO" : "REPOSICIONANDO";
                 statusLabel.color = preparing ? color : Color.white;
-                if (target.viewCamera) statusLabel.transform.rotation = target.viewCamera.transform.rotation;
             }
-            if (health.label && target.viewCamera) health.label.transform.rotation = target.viewCamera.transform.rotation;
         }
 
         private void HideWarning()

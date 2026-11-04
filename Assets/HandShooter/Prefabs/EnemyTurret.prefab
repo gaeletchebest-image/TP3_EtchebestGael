@@ -90,7 +90,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 661381626628659461}
-  m_Text: 24 / 24
+  m_Text: ''
   m_OffsetZ: 0
   m_CharacterSize: 0.04
   m_LineSpacing: 1
@@ -393,6 +393,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.TurretEnemy
   settings: {fileID: 11400000, guid: b42b63d8f03a11b49aad15386660eb11, type: 2}
+  projectileMaterial: {fileID: 2100000, guid: ef0e32cd4b278344a9786c57331a1c31, type: 2}
   muzzle: {fileID: 4878013726442648945}
   target: {fileID: 0}
 --- !u!1 &4826526347285520894

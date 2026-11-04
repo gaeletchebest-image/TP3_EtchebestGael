@@ -6,6 +6,7 @@ namespace HandShooter
     public sealed class TurretEnemy : MonoBehaviour
     {
         public TurretSettings settings;
+        public Material projectileMaterial;
         public Transform muzzle;
         public PrototypePlayer target;
         private float nextShot;
@@ -38,7 +39,9 @@ namespace HandShooter
             var properties = new MaterialPropertyBlock();
             properties.SetColor("_BaseColor", settings.projectileColor);
             properties.SetColor("_Color", settings.projectileColor);
-            shot.GetComponent<Renderer>().SetPropertyBlock(properties);
+            var renderer = shot.GetComponent<Renderer>();
+            if (projectileMaterial) renderer.sharedMaterial = projectileMaterial;
+            renderer.SetPropertyBlock(properties);
             shot.AddComponent<TurretProjectile>().Initialize(direction, settings, transform);
         }
     }
