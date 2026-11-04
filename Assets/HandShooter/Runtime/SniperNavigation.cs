@@ -31,6 +31,8 @@ namespace HandShooter
                 exclusions.Add(new NavMeshBuildMarkup { root = player.transform, ignoreFromBuild = true });
             foreach (var pickup in FindObjectsByType<FuelTankPickup>(FindObjectsSortMode.None))
                 exclusions.Add(new NavMeshBuildMarkup { root = pickup.transform, ignoreFromBuild = true });
+            foreach (var door in FindObjectsByType<SlidingDoor>(FindObjectsSortMode.None))
+                exclusions.Add(new NavMeshBuildMarkup { root = door.transform, ignoreFromBuild = true });
 
             var sources = new List<NavMeshBuildSource>();
             var rootSources = new List<NavMeshBuildSource>();
