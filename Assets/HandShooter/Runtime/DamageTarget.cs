@@ -10,7 +10,7 @@ namespace HandShooter
         public SniperSettings sniperSettings;
         public HunterSettings hunterSettings;
         public event System.Action<float> Damaged;
-        private float InitialHealth => hunterSettings ? hunterSettings.initialHealth : sniperSettings ? sniperSettings.initialHealth : kamikazeSettings ? kamikazeSettings.initialHealth :
+        internal float MaximumHealth => hunterSettings ? hunterSettings.initialHealth : sniperSettings ? sniperSettings.initialHealth : kamikazeSettings ? kamikazeSettings.initialHealth :
             turretSettings ? turretSettings.initialHealth : settings.targetHealth;
         private int InitialDefensePoints => hunterSettings ? hunterSettings.initialDefensePoints : sniperSettings ? sniperSettings.initialDefensePoints :
             kamikazeSettings ? kamikazeSettings.initialDefensePoints : turretSettings ? turretSettings.initialDefensePoints : 0;
@@ -18,6 +18,7 @@ namespace HandShooter
             kamikazeSettings ? kamikazeSettings.defenseBarCapacity : turretSettings ? turretSettings.defenseBarCapacity : 1;
         public TextMesh label;
         public float Health { get; private set; }
+        internal Vector3 RangeCenter => new Vector3(transform.position.x, body.bounds.min.y + 0.07f, transform.position.z);
         public int DefensePoints => defense.Points;
         public int DefenseBar => defense.Bar;
         public int DefenseBarCapacity => defense.Capacity;
@@ -32,7 +33,7 @@ namespace HandShooter
         private EnemyDefense defense;
         private EnemyVitalsDisplay vitals;
         private TextMesh statusLabel;
-        private bool IsEnemy => turretSettings || kamikazeSettings || sniperSettings || hunterSettings;
+        internal bool IsEnemy => turretSettings || kamikazeSettings || sniperSettings || hunterSettings;
 
         private void Awake()
         {
@@ -91,7 +92,7 @@ namespace HandShooter
         }
         public void ResetTarget()
         {
-            Health = InitialHealth;
+            Health = MaximumHealth;
             defense = new EnemyDefense(InitialDefensePoints, InitialDefenseCapacity);
             LastDamage = 0;
             respawnAt = -1f;
@@ -107,8 +108,8 @@ namespace HandShooter
         }
         private void RefreshLabel()
         {
-            if (label) label.text = Health <= 0 ? "DESTRUIDO" : $"{Health:0.#} / {InitialHealth:0.#}" + (LastDamage > 0 ? $"\n-{LastDamage:0.#}" : "");
-            vitals?.Refresh(Health, InitialHealth, LastDamage, defense);
+            if (label) label.text = Health <= 0 ? "DESTRUIDO" : $"{Health:0.#} / {MaximumHealth:0.#}" + (LastDamage > 0 ? $"\n-{LastDamage:0.#}" : "");
+            vitals?.Refresh(Health, MaximumHealth, LastDamage, defense);
         }
     }
 }

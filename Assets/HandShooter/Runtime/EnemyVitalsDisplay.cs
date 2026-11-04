@@ -67,10 +67,10 @@ namespace HandShooter
         public void Destroy() => Object.Destroy(root);
 
         internal static RectTransform CreateBar(string name, string fillName, Transform parent, float y, float height,
-            Color background, Color foreground)
+            Color background, Color foreground, float width = BarWidth)
         {
-            var track = CreateGraphic<Image>(name, parent, background, new Vector2(BarWidth, height), y);
-            var fill = CreateGraphic<Image>(fillName, track.transform, foreground, new Vector2(BarWidth, height), 0f).rectTransform;
+            var track = CreateGraphic<Image>(name, parent, background, new Vector2(width, height), y);
+            var fill = CreateGraphic<Image>(fillName, track.transform, foreground, new Vector2(width, height), 0f).rectTransform;
             fill.anchorMin = fill.anchorMax = fill.pivot = new Vector2(0f, 0.5f);
             fill.anchoredPosition = Vector2.zero;
             return fill;
@@ -85,7 +85,7 @@ namespace HandShooter
             return text;
         }
 
-        private static T CreateGraphic<T>(string name, Transform parent, Color color, Vector2 size, float y) where T : Graphic
+        internal static T CreateGraphic<T>(string name, Transform parent, Color color, Vector2 size, float y) where T : Graphic
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(T));
             go.layer = parent.gameObject.layer;

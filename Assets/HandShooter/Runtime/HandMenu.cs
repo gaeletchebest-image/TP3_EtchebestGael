@@ -145,7 +145,7 @@ namespace HandShooter
             }
             fuelLabel.text = "COMBUSTIBLE";
             tankLabel.text = $"{weapon.Fuel:0}/{weapon.tankCapacity:0}   ·   TANQUES ×{weapon.SpareTankCount}";
-            if (controls) controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey} MOVER   {player.settings.dashKey} DASH   CLIC DISPARAR   R RECARGAR   1–9 / 0 CONFIG.   {player.settings.menuKey} MANO";
+            if (controls) controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey} MOVER   {player.settings.dashKey} DASH   CLIC DISPARAR   R RECARGAR   CTRL INSPECCIONAR   1–9 / 0 CONFIG.   {player.settings.menuKey} MANO";
             debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.settings.EvaluateFuelCost(stats, weapon.fuelPerDamage):0.##} COMBUSTIBLE / DISPARO";
             if (!stats.Hitscan) debugText.text += $"\nÁREA {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
             if (hitText) hitText.text = Time.time - weapon.LastHitTime < 0.5f ? $"IMPACTO  -{weapon.LastHitDamage:0.##}" : "";

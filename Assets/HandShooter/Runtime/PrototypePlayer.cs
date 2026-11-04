@@ -26,14 +26,15 @@ namespace HandShooter
         private float dashRemaining;
         private float dashCooldownRemaining;
         private float previousTimeScale = 1f;
+        private EnemyInspection inspection;
+        private DamageTarget pinnedEnemy;
+        private bool waitForControlRelease;
         private void Awake() { controller = GetComponent<CharacterController>(); }
         private void Start() { SetMenuOpen(false); if (spawnDefaultFuelPickups) FuelTankPickup.SpawnDefaultPickups(transform); }
         private void Update()
         {
             var keyboard = Keyboard.current;
-            if (keyboard != null &&
-                (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed) &&
-                keyboard.rKey.wasPressedThisFrame)
+            if (IsControlHeld(keyboard) && keyboard.rKey.wasPressedThisFrame)
             {
                 RestartScene();
                 return;
@@ -84,6 +85,65 @@ namespace HandShooter
             }
             controller.Move((horizontalMovement + Vector3.up * verticalVelocity) * Time.deltaTime);
         }
+
+        private static bool IsControlHeld(Keyboard keyboard) =>
+            keyboard != null && (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed);
+
+        private void LateUpdate()
+        {
+            if (IsDead || IsMenuOpen || Cursor.lockState != CursorLockMode.Locked || !settings || !viewCamera)
+            {
+                inspection?.Hide();
+                return;
+            }
+
+            var keyboard = Keyboard.current;
+            bool controlHeld = IsControlHeld(keyboard);
+            if (!controlHeld) waitForControlRelease = false;
+            if (CanInspect(pinnedEnemy))
+            {
+                if (keyboard != null && (keyboard.leftCtrlKey.wasPressedThisFrame || keyboard.rightCtrlKey.wasPressedThisFrame))
+                {
+                    pinnedEnemy = null;
+                    waitForControlRelease = controlHeld;
+                    inspection.Hide();
+                    return;
+                }
+
+                inspection.Show(pinnedEnemy, true);
+                return;
+            }
+            pinnedEnemy = null;
+
+            if (controlHeld && !waitForControlRelease)
+            {
+                var target = GetAimedEnemy();
+                if (CanInspect(target))
+                {
+                    if (Mouse.current?.rightButton.wasPressedThisFrame == true)
+                        pinnedEnemy = target;
+
+                    inspection ??= new EnemyInspection(transform);
+                    inspection.Show(target, pinnedEnemy != null);
+                    return;
+                }
+            }
+
+            inspection?.Hide();
+        }
+
+        private DamageTarget GetAimedEnemy()
+        {
+            Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
+            return Physics.Raycast(ray, out RaycastHit hit, viewCamera.farClipPlane,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                ? hit.collider.GetComponentInParent<DamageTarget>()
+                : null;
+        }
+
+        private static bool CanInspect(DamageTarget target) =>
+            target && target.isActiveAndEnabled && target.IsEnemy && target.Health > 0f;
+
         public void SetMenuOpen(bool open)
         {
             if (IsDead) return;
@@ -98,6 +158,8 @@ namespace HandShooter
         {
             if (IsDead) return;
             IsDead = true;
+            pinnedEnemy = null;
+            inspection?.Hide();
             Died?.Invoke(cause);
             IsMenuOpen = false;
             Time.timeScale = 0f;
@@ -115,9 +177,13 @@ namespace HandShooter
         private void OnApplicationFocus(bool focused) { if (!focused && Application.isPlaying && !IsDead) SetMenuOpen(true); }
         private void OnDisable()
         {
+            pinnedEnemy = null;
+            waitForControlRelease = false;
+            inspection?.Hide();
             if (IsMenuOpen) Time.timeScale = previousTimeScale;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
+        private void OnDestroy() => inspection?.Destroy();
     }
 }
