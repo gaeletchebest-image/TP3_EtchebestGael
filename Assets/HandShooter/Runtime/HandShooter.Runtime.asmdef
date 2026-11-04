@@ -1,1 +1,1 @@
-{"name":"HandShooter.Runtime","references":["Unity.InputSystem","Unity.ugui"]}
+{"name":"HandShooter.Runtime","references":["Unity.InputSystem","Unity.ugui","Unity.RenderPipelines.Universal.Runtime"]}

@@ -1,11 +1,16 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace HandShooter
 {
     public sealed class HandWeapon : MonoBehaviour
     {
+        private const int IgnoreRaycastLayer = 2;
+
         public ShooterSettings settings;
         public PrototypePlayer player;
         public Camera viewCamera;
@@ -42,6 +47,10 @@ namespace HandShooter
         private float recoil;
         private Vector3 handRestPosition;
         private Quaternion handRestRotation;
+        private Camera handCamera;
+        private List<Camera> cameraStack;
+        private readonly List<GameObject> handMeshes = new List<GameObject>();
+        private int excludedHandLayer;
         private void Awake()
         {
             Hand = new HandConfiguration(settings.initialActiveFingers, settings.initialThumbActive);
@@ -50,6 +59,56 @@ namespace HandShooter
             SpareTankCount = startingSpareTanks;
             handRestPosition = transform.localPosition;
             handRestRotation = transform.localRotation;
+        }
+        private void Start()
+        {
+            int handLayer = LayerMask.NameToLayer("FirstPersonHand");
+            if (!viewCamera || handLayer < 0 ||
+                !(GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset) ||
+                (viewCamera.cullingMask & Physics.IgnoreRaycastLayer) == 0)
+                return;
+
+            foreach (var mesh in GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (mesh.gameObject.layer == IgnoreRaycastLayer && !mesh.GetComponent<Collider>())
+                    handMeshes.Add(mesh.gameObject);
+            }
+            if (handMeshes.Count == 0) return;
+
+            var viewData = viewCamera.GetUniversalAdditionalCameraData();
+            cameraStack = viewData.cameraStack;
+            if (cameraStack == null) return;
+
+            // Overlay cameras clear depth by default, so only the hand's own depth affects its meshes.
+            handCamera = new GameObject("Hand Camera").AddComponent<Camera>();
+            handCamera.transform.SetParent(viewCamera.transform, false);
+            handCamera.CopyFrom(viewCamera);
+            handCamera.cullingMask = 1 << handLayer;
+            handCamera.useOcclusionCulling = false;
+            var handData = handCamera.GetUniversalAdditionalCameraData();
+            handData.renderType = CameraRenderType.Overlay;
+            handData.renderShadows = false;
+
+            foreach (var mesh in handMeshes) mesh.layer = handLayer;
+            excludedHandLayer = viewCamera.cullingMask & handCamera.cullingMask;
+            viewCamera.cullingMask &= ~handCamera.cullingMask;
+            cameraStack.Add(handCamera);
+        }
+        private void LateUpdate()
+        {
+            if (handCamera && viewCamera) handCamera.fieldOfView = viewCamera.fieldOfView;
+        }
+        private void OnDestroy()
+        {
+            if (cameraStack == null) return;
+
+            cameraStack.Remove(handCamera);
+            foreach (var mesh in handMeshes)
+            {
+                if (mesh) mesh.layer = IgnoreRaycastLayer;
+            }
+            if (viewCamera) viewCamera.cullingMask |= excludedHandLayer;
+            if (handCamera) Destroy(handCamera.gameObject);
         }
         public void RequireTriggerRelease() { requireRelease = true; }
         public bool SavePreset(int digit)
