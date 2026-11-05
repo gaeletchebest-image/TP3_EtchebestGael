@@ -2629,6 +2629,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5986152077505839344, guid: d24b04a8096f55f4aa97585d20fa1a4e, type: 3}
   m_PrefabInstance: {fileID: 61424902}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &61424904 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8345556803540772042, guid: d24b04a8096f55f4aa97585d20fa1a4e, type: 3}
+  m_PrefabInstance: {fileID: 61424902}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf0518f25ba8f4c49978c47e03b273e3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.CargoLift
 --- !u!1 &68961625
 GameObject:
   m_ObjectHideFlags: 0
@@ -20014,6 +20025,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5986152077505839344, guid: d24b04a8096f55f4aa97585d20fa1a4e, type: 3}
   m_PrefabInstance: {fileID: 623737702}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &623737704 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8345556803540772042, guid: d24b04a8096f55f4aa97585d20fa1a4e, type: 3}
+  m_PrefabInstance: {fileID: 623737702}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf0518f25ba8f4c49978c47e03b273e3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.CargoLift
 --- !u!43 &630182534
 Mesh:
   m_ObjectHideFlags: 0
@@ -31289,6 +31311,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1119638167}
+  - component: {fileID: 1119638168}
   m_Layer: 0
   m_Name: Level Lifts
   m_TagString: Untagged
@@ -31315,6 +31338,22 @@ Transform:
   - {fileID: 1789678145}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1119638168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1119638166}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d02d43dc735607e4fb94c1a035f3036a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.LevelLiftTransition
+  arrival: {fileID: 623737704}
+  departure: {fileID: 61424904}
+  player: {fileID: 1928668632}
+  blackHoldSeconds: 1
 --- !u!1 &1124884648
 GameObject:
   m_ObjectHideFlags: 0

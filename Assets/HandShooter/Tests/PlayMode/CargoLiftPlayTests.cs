@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace HandShooter.Tests
 {
@@ -22,11 +23,16 @@ namespace HandShooter.Tests
             var arrival = GameObject.Find("Arrival Lift").transform;
             var arrivalCar = arrival.Find("Carriage");
             var arrivalGate = arrivalCar.Find("Gate");
+            var fade = GameObject.Find("Level Fade").GetComponentInChildren<Image>();
+            Assert.That(fade.color.a, Is.GreaterThan(0.95f));
             Assert.That(arrivalCar.localPosition.y, Is.GreaterThan(3.5f));
             player.transform.position = arrivalCar.position + Vector3.up * 0.08f;
             Physics.SyncTransforms();
             Assert.That(arrivalGate.localPosition.y, Is.Zero.Within(0.01f));
+            yield return WaitFor(() => fade.color.a < 0.9f);
+            Assert.That(fade.color.a, Is.GreaterThan(0f));
             yield return WaitFor(() => arrivalGate.localPosition.y > 2f);
+            Assert.That(fade.color.a, Is.Zero);
             Assert.That(arrivalCar.localPosition.y, Is.Zero.Within(0.01f));
             Assert.That(player.transform.position.y - arrivalCar.position.y, Is.InRange(0f, 0.25f));
             for (int step = 0; step < 23; step++)
@@ -49,15 +55,29 @@ namespace HandShooter.Tests
             Assert.That(player.transform.position.z, Is.EqualTo(171.25f).Within(0.2f));
             yield return new WaitForSeconds(0.25f);
             Assert.That(departureGate.localPosition.y, Is.GreaterThan(2f));
+            Assert.That(fade.color.a, Is.Zero);
 
             for (int step = 0; step < 8; step++)
                 rider.Move(new Vector3(0f, -0.05f, 0.15f));
             Assert.That(player.transform.position.z, Is.GreaterThan(departure.position.z - 0.5f));
             yield return WaitFor(() => departureCar.position.y < upperY - 0.01f);
             Assert.That(departureGate.localPosition.y, Is.Zero.Within(0.01f));
-            yield return WaitFor(() => departureCar.localPosition.y <= -height + 0.01f);
+            yield return WaitFor(() => fade.color.a > 0.1f);
+            Assert.That(fade.color.a, Is.LessThan(1f));
+            yield return WaitFor(() => fade.color.a == 1f);
+            Assert.That(departureCar.localPosition.y, Is.EqualTo(-height).Within(0.01f));
             Assert.That(player.transform.position.y - departureCar.position.y, Is.InRange(0f, 0.25f));
             Assert.That(departureGate.localPosition.y, Is.Zero.Within(0.01f));
+
+            float fullyBlackAt = Time.time;
+            yield return new WaitForSeconds(0.75f);
+            Assert.That(fade, Is.Not.Null);
+            Assert.That(fade.color.a, Is.EqualTo(1f));
+            yield return WaitFor(() => !fade);
+            Assert.That(Time.time - fullyBlackAt, Is.GreaterThanOrEqualTo(0.95f));
+            Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("LevelStarter"));
+            var newFade = GameObject.Find("Level Fade").GetComponentInChildren<Image>();
+            Assert.That(newFade.color.a, Is.GreaterThan(0.95f));
         }
 
         private static IEnumerator WaitFor(System.Func<bool> condition)

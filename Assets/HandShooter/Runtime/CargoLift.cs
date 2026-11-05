@@ -42,6 +42,8 @@ namespace HandShooter
         private bool travelling;
         private bool destinationUpper;
 
+        internal float DescentProgress => 1f - liftPosition;
+
         private void Awake()
         {
             if (!carriage || !deck || !openClip || !closeClip || !gateCollider)
