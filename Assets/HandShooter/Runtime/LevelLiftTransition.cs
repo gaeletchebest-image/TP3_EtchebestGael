@@ -14,13 +14,27 @@ namespace HandShooter
         [SerializeField] private PrototypePlayer player;
         [Tooltip("Tiempo en negro antes de volver a cargar el nivel.")]
         [SerializeField, Min(0f)] private float blackHoldSeconds = 1f;
+        [Tooltip("Segundos para llegar al ascensor de salida. Cero desactiva el contador.")]
+        [SerializeField, Min(0)] private int levelDurationSeconds;
+        [SerializeField] private Text countdown;
+        [SerializeField] private Text deathSubtitle;
 
         private Image shade;
+        private Color countdownColor;
+        private double secondsRemaining;
+        private long displayedCentiseconds = -1;
         private float? reloadAt;
         private bool loading;
+        internal float SecondsRemaining => (float)secondsRemaining;
 
         private void Awake()
         {
+            if (countdown)
+            {
+                countdownColor = countdown.color;
+                countdown.enabled = false;
+            }
+
             var scene = gameObject.scene;
             if (!player)
             {
@@ -39,6 +53,7 @@ namespace HandShooter
                 return;
             }
 
+            secondsRemaining = levelDurationSeconds;
             var overlay = new GameObject("Level Fade", typeof(RectTransform), typeof(Canvas));
             SceneManager.MoveGameObjectToScene(overlay, scene);
             var canvas = overlay.GetComponent<Canvas>();
@@ -61,6 +76,7 @@ namespace HandShooter
 
             // Derive opacity from the lift poses so it also follows restored saves.
             float departureFade = departure.DescentProgress;
+            UpdateCountdown(departureFade);
             float opacity = Mathf.Max(1f - arrival.DescentProgress, departureFade);
             shade.color = new Color(0f, 0f, 0f, opacity);
             shade.enabled = opacity > 0f && !player.IsDead && (!player.IsMenuOpen || player.IsPauseMenuOpen);
@@ -78,9 +94,41 @@ namespace HandShooter
             SceneManager.LoadSceneAsync(gameObject.scene.buildIndex, LoadSceneMode.Single);
         }
 
+        private void UpdateCountdown(float departureFade)
+        {
+            if (levelDurationSeconds <= 0) return;
+            bool running = arrival.IsGateOpen && departureFade == 0f &&
+                !player.IsDead && !player.IsMenuOpen && !departure.IsPlayerAboard();
+            if (countdown) countdown.enabled = running;
+            if (!running) return;
+
+            if (Time.timeScale > 0f) secondsRemaining = System.Math.Max(0d, secondsRemaining - Time.deltaTime);
+            if (secondsRemaining <= 0d)
+            {
+                if (countdown) countdown.enabled = false;
+                if (deathSubtitle) deathSubtitle.text = "Se agotó el tiempo.";
+                player.Die("Tiempo agotado");
+                return;
+            }
+
+            if (!countdown) return;
+            long centiseconds = (long)(secondsRemaining * 100d);
+            if (centiseconds == displayedCentiseconds) return;
+            displayedCentiseconds = centiseconds;
+            countdown.text = $"{centiseconds / 6000:00}:{centiseconds / 100 % 60:00}.{centiseconds % 100:00}";
+            countdown.color = centiseconds <= 1500 ? new Color(1f, 0.38f, 0.32f) : countdownColor;
+        }
+
+        internal void RestoreCountdown(float seconds)
+        {
+            // Older saves omit the timer, so a missing value keeps the initial duration.
+            if (levelDurationSeconds > 0 && seconds > 0f && !float.IsInfinity(seconds)) secondsRemaining = seconds;
+        }
+
         private void OnDisable()
         {
             if (shade) shade.enabled = false;
+            if (countdown) countdown.enabled = false;
         }
 
         private void OnDestroy()

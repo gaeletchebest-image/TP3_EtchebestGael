@@ -11,6 +11,19 @@ namespace HandShooter.Tests
 {
     public sealed class LevelStarterLiftPlayTests
     {
+        private float previousMaximumDeltaTime;
+
+        [SetUp]
+        public void LimitFrameStep()
+        {
+            previousMaximumDeltaTime = Time.maximumDeltaTime;
+            // These tests can disable player gravity while the lift carries the rider.
+            Time.maximumDeltaTime = 0.05f;
+        }
+
+        [TearDown]
+        public void RestoreFrameStep() => Time.maximumDeltaTime = previousMaximumDeltaTime;
+
         [UnityTest]
         public IEnumerator PlayerArrivesAndBoardsTheDepartureLiftWithoutInput()
         {
@@ -24,6 +37,8 @@ namespace HandShooter.Tests
             var arrivalCar = arrival.Find("Carriage");
             var arrivalGate = arrivalCar.Find("Gate");
             var fade = GameObject.Find("Level Fade").GetComponentInChildren<Image>();
+            var countdown = GameObject.Find("Level Countdown").GetComponent<Text>();
+            Assert.That(countdown.enabled, Is.False);
             Assert.That(fade.color.a, Is.GreaterThan(0.95f));
             Assert.That(arrivalCar.localPosition.y, Is.GreaterThan(3.5f));
             player.transform.position = arrivalCar.position + Vector3.up * 0.08f;
@@ -32,6 +47,7 @@ namespace HandShooter.Tests
             yield return WaitFor(() => fade.color.a < 0.9f);
             Assert.That(fade.color.a, Is.GreaterThan(0f));
             yield return WaitFor(() => arrivalGate.localPosition.y > 2f);
+            yield return WaitFor(() => countdown.enabled);
             Assert.That(fade.color.a, Is.Zero);
             Assert.That(arrivalCar.localPosition.y, Is.Zero.Within(0.01f));
             Assert.That(player.transform.position.y - arrivalCar.position.y, Is.InRange(0f, 0.25f));
@@ -56,11 +72,17 @@ namespace HandShooter.Tests
             yield return new WaitForSeconds(0.25f);
             Assert.That(departureGate.localPosition.y, Is.GreaterThan(2f));
             Assert.That(fade.color.a, Is.Zero);
+            Assert.That(countdown.enabled, Is.True);
 
+            Object.FindFirstObjectByType<LevelLiftTransition>().SendMessage("RestoreCountdown", 0.25f);
             for (int step = 0; step < 8; step++)
                 rider.Move(new Vector3(0f, -0.05f, 0.15f));
             Assert.That(player.transform.position.z, Is.GreaterThan(departure.position.z - 0.5f));
+            yield return WaitFor(() => !countdown.enabled);
+            Assert.That(departureGate.localPosition.y, Is.GreaterThan(0.01f));
+            Assert.That(departureCar.position.y, Is.EqualTo(upperY).Within(0.01f));
             yield return WaitFor(() => departureCar.position.y < upperY - 0.01f);
+            Assert.That(player.IsDead, Is.False);
             Assert.That(departureGate.localPosition.y, Is.Zero.Within(0.01f));
             yield return WaitFor(() => fade.color.a > 0.1f);
             Assert.That(fade.color.a, Is.LessThan(1f));
@@ -80,11 +102,50 @@ namespace HandShooter.Tests
             Assert.That(newFade.color.a, Is.GreaterThan(0.95f));
         }
 
+        [UnityTest]
+        public IEnumerator CountdownPausesWithTheMenuAndDefeatsThePlayerWhenItExpires()
+        {
+            Time.timeScale = 1f;
+            try
+            {
+                yield return SceneManager.LoadSceneAsync("LevelStarter");
+                var player = Object.FindFirstObjectByType<PrototypePlayer>();
+                player.SetMenuOpen(false);
+                var countdown = GameObject.Find("Level Countdown").GetComponent<Text>();
+                Assert.That(countdown.transform.parent.name, Is.EqualTo("Canvas"));
+                yield return WaitFor(() => countdown.enabled);
+
+                var transition = Object.FindFirstObjectByType<LevelLiftTransition>();
+                Time.timeScale = 0f;
+                transition.SendMessage("RestoreCountdown", 65.125f);
+                yield return null;
+                Assert.That(countdown.text, Is.EqualTo("01:05.12"));
+
+                Time.timeScale = 1f;
+                transition.SendMessage("RestoreCountdown", 0.25f);
+                player.SetMenuOpen(true);
+                yield return new WaitForSecondsRealtime(0.4f);
+                Assert.That(countdown.enabled, Is.False);
+                Assert.That(player.IsDead, Is.False);
+
+                player.SetMenuOpen(false);
+                yield return WaitFor(() => player.IsDead);
+                Assert.That(Time.timeScale, Is.Zero);
+                Assert.That(player.deathScreen.activeSelf, Is.True);
+                Assert.That(player.deathScreen.transform.Find("Death Subtitle").GetComponent<Text>().text,
+                    Is.EqualTo("Se agotó el tiempo."));
+            }
+            finally
+            {
+                Time.timeScale = 1f;
+            }
+        }
+
         private static IEnumerator WaitFor(System.Func<bool> condition)
         {
             float deadline = Time.realtimeSinceStartup + 8f;
             while (!condition() && Time.realtimeSinceStartup < deadline) yield return null;
-            Assert.That(condition(), Is.True, "The automatic lift did not reach the expected pose.");
+            Assert.That(condition(), Is.True, "The level did not reach the expected state.");
         }
 
         [UnityTest]

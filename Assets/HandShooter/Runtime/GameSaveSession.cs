@@ -13,6 +13,7 @@ namespace HandShooter
         private static string SaveDirectory => Path.Combine(Application.persistentDataPath, "Saves");
 
         private readonly PrototypePlayer player;
+        private readonly LevelLiftTransition countdown;
         private readonly Dictionary<string, DamageTarget> enemies = new Dictionary<string, DamageTarget>();
         private readonly Dictionary<string, SlidingDoor> doors = new Dictionary<string, SlidingDoor>();
         private readonly Dictionary<string, CargoLift> lifts = new Dictionary<string, CargoLift>();
@@ -23,6 +24,8 @@ namespace HandShooter
         {
             this.player = player;
             var roots = player.gameObject.scene.GetRootGameObjects();
+            countdown = roots.Select(root => root.GetComponentInChildren<LevelLiftTransition>())
+                .FirstOrDefault(transition => transition && transition.SecondsRemaining > 0f);
             Collect(roots, enemies, target => target.IsEnemy);
             Collect(roots, doors);
             Collect(roots, lifts);
@@ -45,6 +48,7 @@ namespace HandShooter
                 version = SavedGame.CurrentVersion,
                 savedAtUtc = DateTime.UtcNow.Ticks,
                 scene = player.gameObject.scene.path,
+                levelSecondsRemaining = countdown ? countdown.SecondsRemaining : 0f,
                 player = player.CaptureState(),
                 enemies = new List<SavedGame.Enemy>(),
                 doors = new List<SavedGame.Door>(),
@@ -85,6 +89,7 @@ namespace HandShooter
                 if (doors.TryGetValue(state.id, out var door) && door) door.RestoreState(state);
             foreach (var pair in lifts)
                 if (pair.Value) pair.Value.RestoreState(snapshot.lifts?.Find(state => state.id == pair.Key));
+            if (countdown) countdown.RestoreCountdown(snapshot.levelSecondsRemaining);
             foreach (var id in snapshot.consumedPickups)
                 if (pickups.TryGetValue(id, out var pickup) && pickup) Remove(pickup.gameObject);
 

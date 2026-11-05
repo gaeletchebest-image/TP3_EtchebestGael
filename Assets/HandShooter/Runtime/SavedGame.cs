@@ -11,6 +11,7 @@ namespace HandShooter
         public int version;
         public long savedAtUtc;
         public string scene;
+        public float levelSecondsRemaining;
         public Player player;
         public List<Enemy> enemies;
         public List<Door> doors;

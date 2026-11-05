@@ -43,6 +43,7 @@ namespace HandShooter
         private bool destinationUpper;
 
         internal float DescentProgress => 1f - liftPosition;
+        internal bool IsGateOpen => gatePosition == 1f;
 
         private void Awake()
         {
@@ -219,8 +220,10 @@ namespace HandShooter
             UpdateIndicators();
         }
 
-        private bool IsPlayerAboard()
+        internal bool IsPlayerAboard()
         {
+            if (!isActiveAndEnabled) return false;
+
             int count = FindAboveDeck();
             for (int i = 0; i < count; i++)
             {

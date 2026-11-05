@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -42,6 +43,8 @@ namespace HandShooter.Tests
             var button = saveObject.GetComponent<Button>();
             Assert.That(button.interactable, Is.True);
             Assert.That(Time.timeScale, Is.Zero);
+            const float savedSeconds = 37.5f;
+            Object.FindFirstObjectByType<LevelLiftTransition>().SendMessage("RestoreCountdown", savedSeconds);
 
             var liftCarriage = GameObject.Find("Arrival Lift").transform.Find("Carriage");
             Vector3 savedCarriagePosition = liftCarriage.position;
@@ -87,6 +90,10 @@ namespace HandShooter.Tests
             yield return null;
 
             var restored = Object.FindFirstObjectByType<PrototypePlayer>();
+            var transition = Object.FindFirstObjectByType<LevelLiftTransition>();
+            var remainingTime = typeof(LevelLiftTransition).GetProperty("SecondsRemaining",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(remainingTime.GetValue(transition), Is.EqualTo(savedSeconds));
             Assert.That(Vector3.Distance(restored.transform.position, savedPosition), Is.LessThan(0.05f));
             var restoredCarriage = GameObject.Find("Arrival Lift").transform.Find("Carriage");
             Assert.That(Vector3.Distance(restoredCarriage.position, savedCarriagePosition), Is.LessThan(0.05f));
