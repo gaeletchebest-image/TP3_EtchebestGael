@@ -43,6 +43,8 @@ namespace HandShooter.Tests
             Assert.That(button.interactable, Is.True);
             Assert.That(Time.timeScale, Is.Zero);
 
+            var liftCarriage = GameObject.Find("Arrival Lift").transform.Find("Carriage");
+            Vector3 savedCarriagePosition = liftCarriage.position;
             player.transform.position += Vector3.right * 0.25f;
             Vector3 savedPosition = player.transform.position;
             player.weapon.AddFuelTank(5);
@@ -76,6 +78,7 @@ namespace HandShooter.Tests
             yield return null;
             OpenPauseMenu(Object.FindFirstObjectByType<PrototypePlayer>());
             var row = Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
+                .OrderBy(candidate => candidate.transform.GetSiblingIndex())
                 .First(candidate => candidate.GetComponentInChildren<Text>()?.text.Contains("LevelStarter   ·") == true);
             row.onClick.Invoke();
             for (int frame = 0; frame < 600 && SceneManager.GetActiveScene().name != "LevelStarter"; frame++)
@@ -85,6 +88,8 @@ namespace HandShooter.Tests
 
             var restored = Object.FindFirstObjectByType<PrototypePlayer>();
             Assert.That(Vector3.Distance(restored.transform.position, savedPosition), Is.LessThan(0.05f));
+            var restoredCarriage = GameObject.Find("Arrival Lift").transform.Find("Carriage");
+            Assert.That(Vector3.Distance(restoredCarriage.position, savedCarriagePosition), Is.LessThan(0.05f));
             Assert.That(restored.weapon.SpareTankCount, Is.EqualTo(tanks));
             Assert.That(restored.weapon.Hand.ActiveMask, Is.EqualTo(12));
             Assert.That(restored.weapon.Hand.ThumbActive, Is.False);

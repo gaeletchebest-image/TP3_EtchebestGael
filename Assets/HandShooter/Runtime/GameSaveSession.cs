@@ -15,6 +15,7 @@ namespace HandShooter
         private readonly PrototypePlayer player;
         private readonly Dictionary<string, DamageTarget> enemies = new Dictionary<string, DamageTarget>();
         private readonly Dictionary<string, SlidingDoor> doors = new Dictionary<string, SlidingDoor>();
+        private readonly Dictionary<string, CargoLift> lifts = new Dictionary<string, CargoLift>();
         private readonly Dictionary<string, ArenaEncounter> arenas = new Dictionary<string, ArenaEncounter>();
         private readonly Dictionary<string, FuelTankPickup> pickups = new Dictionary<string, FuelTankPickup>();
 
@@ -24,6 +25,7 @@ namespace HandShooter
             var roots = player.gameObject.scene.GetRootGameObjects();
             Collect(roots, enemies, target => target.IsEnemy);
             Collect(roots, doors);
+            Collect(roots, lifts);
             Collect(roots, arenas);
             Collect(roots, pickups);
         }
@@ -46,6 +48,7 @@ namespace HandShooter
                 player = player.CaptureState(),
                 enemies = new List<SavedGame.Enemy>(),
                 doors = new List<SavedGame.Door>(),
+                lifts = new List<SavedGame.Lift>(),
                 arenas = new List<SavedGame.Arena>(),
                 consumedPickups = new List<string>()
             };
@@ -56,6 +59,8 @@ namespace HandShooter
             }
             foreach (var pair in doors)
                 if (pair.Value) snapshot.doors.Add(pair.Value.CaptureState(pair.Key));
+            foreach (var pair in lifts)
+                if (pair.Value) snapshot.lifts.Add(pair.Value.CaptureState(pair.Key));
             foreach (var pair in arenas)
                 if (pair.Value) snapshot.arenas.Add(new SavedGame.Arena { id = pair.Key, state = pair.Value.State });
             foreach (var pair in pickups)
@@ -78,6 +83,8 @@ namespace HandShooter
                 if (arenas.TryGetValue(state.id, out var arena) && arena) arena.State = state.state;
             foreach (var state in snapshot.doors)
                 if (doors.TryGetValue(state.id, out var door) && door) door.RestoreState(state);
+            foreach (var pair in lifts)
+                if (pair.Value) pair.Value.RestoreState(snapshot.lifts?.Find(state => state.id == pair.Key));
             foreach (var id in snapshot.consumedPickups)
                 if (pickups.TryGetValue(id, out var pickup) && pickup) Remove(pickup.gameObject);
 
@@ -155,6 +162,7 @@ namespace HandShooter
             HandConfiguration.IsValidMask(snapshot.player.weapon.mask) &&
             snapshot.enemies != null && snapshot.enemies.All(entry => !string.IsNullOrEmpty(entry?.id)) &&
             snapshot.doors != null && snapshot.doors.All(entry => !string.IsNullOrEmpty(entry?.id)) &&
+            (snapshot.lifts == null || snapshot.lifts.All(entry => !string.IsNullOrEmpty(entry?.id))) &&
             snapshot.arenas != null && snapshot.arenas.All(entry => !string.IsNullOrEmpty(entry?.id)) &&
             snapshot.consumedPickups != null && snapshot.consumedPickups.All(id => !string.IsNullOrEmpty(id));
 

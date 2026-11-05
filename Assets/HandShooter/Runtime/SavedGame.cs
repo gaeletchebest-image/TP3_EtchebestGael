@@ -14,6 +14,7 @@ namespace HandShooter
         public Player player;
         public List<Enemy> enemies;
         public List<Door> doors;
+        public List<Lift> lifts;
         public List<Arena> arenas;
         public List<string> consumedPickups;
 
@@ -81,6 +82,14 @@ namespace HandShooter
             public string id;
             public bool open;
             public float openness, startOpenness, progress;
+        }
+
+        [Serializable]
+        internal sealed class Lift
+        {
+            public string id;
+            public float liftPosition, gatePosition;
+            public bool upperStop, gateRequestedOpen, travelQueued, travelling, destinationUpper, linearTravel;
         }
 
         [Serializable]
