@@ -72,7 +72,7 @@ namespace HandShooter
 
         private void LateUpdate()
         {
-            if (loading) return;
+            if (loading || player.IsLoadingSave) return;
 
             // Derive opacity from the lift poses so it also follows restored saves.
             float departureFade = departure.DescentProgress;

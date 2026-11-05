@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace HandShooter
@@ -41,7 +43,7 @@ namespace HandShooter
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetPendingLoad() => pendingLoad = null;
 
-        internal SavedGame Capture()
+        private SavedGame Capture()
         {
             var snapshot = new SavedGame
             {
@@ -104,19 +106,61 @@ namespace HandShooter
             Physics.SyncTransforms();
         }
 
-        internal static void Write(SavedGame snapshot)
+        internal void Save()
         {
+            var snapshot = Capture();
             Directory.CreateDirectory(SaveDirectory);
             string path = Path.Combine(SaveDirectory, Guid.NewGuid().ToString("N") + ".json");
+            WriteAtomically(path, Encoding.UTF8.GetBytes(JsonUtility.ToJson(snapshot)));
+            try
+            {
+                byte[] thumbnail = CaptureThumbnail(player.viewCamera);
+                if (thumbnail != null) WriteAtomically(Path.ChangeExtension(path, ".jpg"), thumbnail);
+            }
+            catch (Exception error) when (error is IOException || error is UnauthorizedAccessException || error is UnityException)
+            {
+                Debug.LogWarning($"No se pudo guardar la miniatura: {error.Message}", player);
+            }
+        }
+
+        private static void WriteAtomically(string path, byte[] data)
+        {
             string temporary = path + ".tmp";
             try
             {
-                File.WriteAllText(temporary, JsonUtility.ToJson(snapshot));
+                File.WriteAllBytes(temporary, data);
                 File.Move(temporary, path);
             }
             finally
             {
                 File.Delete(temporary);
+            }
+        }
+
+        private static byte[] CaptureThumbnail(Camera camera)
+        {
+            var request = new RenderPipeline.StandardRequest();
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null ||
+                !RenderPipeline.SupportsRenderRequest(camera, request)) return null;
+
+            const int width = 320, height = 180;
+            var active = RenderTexture.active;
+            var target = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
+            Texture2D image = null;
+            try
+            {
+                request.destination = target;
+                RenderPipeline.SubmitRenderRequest(camera, request);
+                RenderTexture.active = target;
+                image = new Texture2D(width, height, TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, width, height), 0, 0, false);
+                return image.EncodeToJPG(80);
+            }
+            finally
+            {
+                if (image) UnityEngine.Object.Destroy(image);
+                RenderTexture.active = active;
+                RenderTexture.ReleaseTemporary(target);
             }
         }
 
@@ -130,7 +174,11 @@ namespace HandShooter
                 try
                 {
                     var snapshot = JsonUtility.FromJson<SavedGame>(File.ReadAllText(path));
-                    if (IsValid(snapshot)) saves.Add(snapshot);
+                    if (IsValid(snapshot))
+                    {
+                        snapshot.filePath = path;
+                        saves.Add(snapshot);
+                    }
                     else skipped++;
                 }
                 catch (Exception error) when (error is IOException || error is UnauthorizedAccessException || error is ArgumentException)
@@ -140,6 +188,21 @@ namespace HandShooter
             }
             saves.Sort((a, b) => b.savedAtUtc.CompareTo(a.savedAtUtc));
             return saves;
+        }
+
+        internal static bool Delete(SavedGame snapshot)
+        {
+            File.Delete(snapshot.filePath);
+            try
+            {
+                File.Delete(snapshot.ThumbnailPath);
+                return true;
+            }
+            catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
+            {
+                Debug.LogWarning($"No se pudo eliminar la miniatura: {error.Message}");
+                return false;
+            }
         }
 
         internal static bool BeginLoad(SavedGame snapshot)

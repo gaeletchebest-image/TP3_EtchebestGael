@@ -2638,7 +2638,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bf0518f25ba8f4c49978c47e03b273e3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.CargoLift
 --- !u!1 &68961625
 GameObject:
@@ -17047,7 +17047,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
   m_EffectColor: {r: 0, g: 0, b: 0, a: 0.8}
   m_EffectDistance: {x: 1.5, y: -1.5}
@@ -17070,7 +17070,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -20098,6 +20098,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6940644120721166690, guid: d24b04a8096f55f4aa97585d20fa1a4e, type: 3}
+      propertyPath: m_IsTrigger
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8345556803540772042, guid: d24b04a8096f55f4aa97585d20fa1a4e, type: 3}
       propertyPath: operation
       value: 1
@@ -20129,7 +20133,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bf0518f25ba8f4c49978c47e03b273e3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.CargoLift
 --- !u!43 &630182534
 Mesh:
@@ -31444,7 +31448,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d02d43dc735607e4fb94c1a035f3036a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.LevelLiftTransition
   arrival: {fileID: 623737704}
   departure: {fileID: 61424904}
@@ -39561,7 +39565,7 @@ MeshCollider:
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
-  m_Mesh: {fileID: 1781530517}
+  m_Mesh: {fileID: 1189691598}
 --- !u!33 &1359928819
 MeshFilter:
   m_ObjectHideFlags: 10

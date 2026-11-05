@@ -16,12 +16,14 @@ namespace HandShooter
         public Text deathHint;
         public bool IsMenuOpen { get; private set; }
         internal bool IsPauseMenuOpen { get; private set; }
+        internal bool IsLoadingSave => pauseMenu && pauseMenu.IsLoading;
         public bool IsDead { get; private set; }
         public bool spawnDefaultFuelPickups = true;
         public event System.Action<string> Died;
         public float DashCooldownFraction => settings == null || settings.dashCooldown <= 0f
             ? 1f : Mathf.Clamp01(1f - dashCooldownRemaining / settings.dashCooldown);
         private CharacterController controller;
+        private int deathFrame;
         private float pitch, verticalVelocity;
         private Vector3 dashDirection;
         private float dashRemaining;
@@ -46,16 +48,35 @@ namespace HandShooter
         private void Update()
         {
             var keyboard = Keyboard.current;
-            if (pauseMenu && pauseMenu.IsLoading) return;
+            if (IsLoadingSave) return;
+            if (IsDead)
+            {
+                if (deathHint) deathHint.enabled = Mathf.Repeat(Time.unscaledTime, 0.9f) < 0.6f;
+                if (Time.frameCount != deathFrame && WasAnyKeyPressed(keyboard))
+                {
+                    if (pauseMenu && pauseMenu.TryLoadLatest()) Time.timeScale = 1f;
+                    else RestartScene();
+                }
+                return;
+            }
+            if (pauseMenu && pauseMenu.IsConfirmingDelete)
+            {
+                if (keyboard?.escapeKey.wasPressedThisFrame == true) pauseMenu.CancelDelete();
+                return;
+            }
+            if (pauseMenu && keyboard?.f9Key.wasPressedThisFrame == true)
+            {
+                if (pauseMenu.TryLoadLatest()) SetMenu(true, pause: true);
+                return;
+            }
             if (IsControlHeld(keyboard) && keyboard.rKey.wasPressedThisFrame)
             {
                 RestartScene();
                 return;
             }
-            if (IsDead)
+            if (pauseMenu && keyboard?.f5Key.wasPressedThisFrame == true)
             {
-                if (deathHint) deathHint.enabled = Mathf.Repeat(Time.unscaledTime, 0.9f) < 0.6f;
-                if (keyboard != null && keyboard.anyKey.wasPressedThisFrame) RestartScene();
+                pauseMenu.Save();
                 return;
             }
             if (!settings || !viewCamera) return;
@@ -103,6 +124,14 @@ namespace HandShooter
 
         private static bool IsControlHeld(Keyboard keyboard) =>
             keyboard != null && (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed);
+
+        private static bool WasAnyKeyPressed(Keyboard keyboard)
+        {
+            if (keyboard == null) return false;
+            foreach (var key in keyboard.allKeys)
+                if (key.wasPressedThisFrame) return true;
+            return false;
+        }
 
         private void LateUpdate()
         {
@@ -195,8 +224,9 @@ namespace HandShooter
         }
         public void Die(string cause = "Enemigo")
         {
-            if (IsDead) return;
+            if (IsDead || IsLoadingSave) return;
             IsDead = true;
+            deathFrame = Time.frameCount;
             pinnedEnemy = null;
             inspection?.Hide();
             Died?.Invoke(cause);

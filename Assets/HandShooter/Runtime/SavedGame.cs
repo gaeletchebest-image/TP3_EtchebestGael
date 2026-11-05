@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace HandShooter
@@ -12,6 +13,8 @@ namespace HandShooter
         public long savedAtUtc;
         public string scene;
         public float levelSecondsRemaining;
+        [NonSerialized] internal string filePath;
+        internal string ThumbnailPath => Path.ChangeExtension(filePath, ".jpg");
         public Player player;
         public List<Enemy> enemies;
         public List<Door> doors;

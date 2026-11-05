@@ -3,6 +3,7 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -17,11 +18,8 @@ namespace HandShooter.Tests
         private HandMenu menu;
         private Keyboard keyboard;
         private string prefix;
-        private InputTestFixture input;
         [UnitySetUp] public IEnumerator SetUp()
         {
-            input = new InputTestFixture();
-            input.Setup();
             Time.timeScale = 1f;
             yield return SceneManager.LoadSceneAsync("HandShooterPrototype");
             yield return null;
@@ -37,21 +35,23 @@ namespace HandShooter.Tests
         }
         [TearDown] public void Cleanup()
         {
-            if (keyboard != null) InputSystem.RemoveDevice(keyboard);
+            if (keyboard?.added == true) InputSystem.RemoveDevice(keyboard);
             if (prefix != null)
                 for (int digit = 0; digit < HandPresetStore.SlotCount; digit++) PlayerPrefs.DeleteKey(prefix + digit);
             PlayerPrefs.Save();
             Time.timeScale = 1f;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
-            input?.TearDown();
         }
         private void Press(Key key)
         {
-            input.Release(keyboard[key]);
-            input.Press(keyboard[key]);
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(key));
+            InputSystem.Update();
+            keyboard.MakeCurrent();
             Assert.That(keyboard[key].wasPressedThisFrame, Is.True, "Synthetic key must reach the game input state.");
             weapon.SendMessage("Update");
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            InputSystem.Update();
         }
         [UnityTest] public IEnumerator MenuButtonsSaveTheExactHandAndShowFeedbackWhilePaused()
         {
