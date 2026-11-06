@@ -99,8 +99,8 @@ namespace HandShooter.Editor
             switch (settingsTab)
             {
                 case 0:
-                    Fields(draft.shooter, "Daño y ritmo", "baseDamage|Daño base", "additionalFingerMultiplier|Multiplicador por dedo adicional", "cooldownByInactiveFingers|Espera: 4, 3, 2 y 1 dedos activos (s)", "range|Alcance (m)", "automaticFire|Disparo automático", "targetHealth|Vida del blanco");
-                    Fields(draft.shooter, "Proyectil", "projectileDamageMultiplier|Multiplicador de daño", "projectileCooldownMultiplier|Multiplicador de espera", "projectileFuelEfficiency|Descuento de combustible", "projectileSpeed|Velocidad base (m/s)", "projectileSpeedDamageExponent|Reducción de velocidad por daño", "projectileRadius|Radio del proyectil (m)", "projectileLifetime|Duración máxima (s)");
+                    Fields(draft.shooter, "Daño y ritmo", "baseDamage|Daño base", "additionalFingerMultiplier|Multiplicador por dedo adicional", "cooldownByInactiveFingers|Espera: 4, 3, 2 y 1 dedos activos (s)", "range|Alcance del rayo (m)", "automaticFire|Disparo automático", "targetHealth|Vida del blanco");
+                    Fields(draft.shooter, "Proyectil", "projectileDamageMultiplier|Multiplicador de daño", "projectileCooldownMultiplier|Multiplicador de espera", "projectileFuelEfficiency|Descuento de combustible", "projectileSpeed|Velocidad base (m/s)", "projectileSpeedDamageExponent|Reducción de velocidad por daño", "projectileRadius|Radio del proyectil (m)", "projectileRange|Alcance del proyectil (m)");
                     Fields(draft.shooter, "Explosión", "explosionDamageFraction|Fracción del daño directo", "explosionBaseRadius|Radio base (m)", "explosionReferenceDamage|Daño de referencia", "explosionRadiusExponent|Crecimiento del radio", "explosionMaxRadius|Radio máximo (m)");
                     break;
                 case 1:
@@ -111,7 +111,7 @@ namespace HandShooter.Editor
                     EditorGUILayout.LabelField($"Distancia aproximada del dash: {draft.shooter.dashSpeed * draft.shooter.dashDuration:0.##} m");
                     break;
                 case 3:
-                    Fields(draft.turret, "Torreta", "initialHealth|Vida", "detectionRange|Detección (m)", "fireInterval|Espera entre disparos (s)", "projectileSpeed|Velocidad del proyectil (m/s)", "projectileRadius|Radio del proyectil (m)", "projectileLifetime|Duración del proyectil (s)"); break;
+                    Fields(draft.turret, "Torreta", "initialHealth|Vida", "detectionRange|Detección (m)", "fireInterval|Espera entre disparos (s)", "projectileSpeed|Velocidad del proyectil (m/s)", "projectileRadius|Radio del proyectil (m)", "projectileRange|Alcance del proyectil (m)"); break;
                 case 4:
                     Fields(draft.kamikaze, "Kamikaze", "initialHealth|Vida", "detectionRange|Detección (m)", "moveSpeed|Velocidad (m/s)", "detonationRange|Distancia para detonar (m)", "blastRadius|Radio de explosión (m)", "blastDamage|Daño a otros enemigos"); break;
                 case 5:
@@ -129,7 +129,10 @@ namespace HandShooter.Editor
             }
             if (EditorGUI.EndChangeCheck()) ApplyLive();
             Heading("Márgenes de reacción a " + distance.ToString("0.#") + " m");
-            EditorGUILayout.LabelField($"Torreta: viaje nominal {distance / Mathf.Max(0.1f, draft.turret.projectileSpeed):0.##} s  ·  Sniper: dirección fija {draft.sniper.aimLockDuration:0.##} s");
+            string turretTravel = distance <= Mathf.Max(0.1f, draft.turret.projectileRange)
+                ? $"viaje nominal {distance / Mathf.Max(0.1f, draft.turret.projectileSpeed):0.##} s"
+                : "fuera del alcance del proyectil";
+            EditorGUILayout.LabelField($"Torreta: {turretTravel}  ·  Sniper: dirección fija {draft.sniper.aimLockDuration:0.##} s");
             EditorGUILayout.LabelField($"Kamikaze: aproximación ideal {Mathf.Max(0f, distance - draft.kamikaze.detonationRange) / Mathf.Max(0.1f, draft.kamikaze.moveSpeed):0.##} s");
             EditorGUILayout.LabelField($"Hunter alertado: aproximación sin obstáculos ≈ {Mathf.Max(0f, distance - draft.hunter.range) / Mathf.Max(0.1f, draft.hunter.chaseSpeed):0.##} s");
             EditorGUILayout.HelpBox("Los impactos enemigos son letales. Estos tiempos orientan la prueba; cobertura, aceleración, navegación y movimiento del jugador alteran el margen real.", MessageType.None);
@@ -187,7 +190,7 @@ namespace HandShooter.Editor
             if (DefensePoints(draft) > 0)
                 EditorGUILayout.LabelField($"Defensa: {DefensePoints(draft)} puntos · barra de {DefenseCapacity(draft)} disparos por punto");
             EditorGUILayout.HelpBox("Daño y DPS muestran la defensa inicial. Impactos, tiempo y combustible por baja incluyen la pérdida progresiva de defensa. El disparo que rompe un punto todavía recibe su reducción.", MessageType.None);
-            EditorGUILayout.HelpBox("Tiempo ideal: primer disparo listo, todos los impactos acertados, viaje y recargas incluidos. El daño directo suma la explosión cuando tiene radio. El daño a grupos supone blancos juntos y sin cobertura. DPS sostenido supone tanques disponibles; «No viable» indica alcance o reservas insuficientes.", MessageType.Info);
+            EditorGUILayout.HelpBox("Tiempo ideal: primer disparo listo, todos los impactos directos acertados, viaje y recargas incluidos. El daño directo suma la explosión cuando tiene radio. El daño a grupos supone blancos juntos y sin cobertura. DPS sostenido supone tanques disponibles. «No viable» indica alcance de impacto directo o reservas insuficientes.", MessageType.Info);
             tableScroll = EditorGUILayout.BeginScrollView(tableScroll, GUILayout.Height(reference && reference.IsComplete ? 345f : 225f));
             string[] columns = { "Mano", "Directo", "Área / radio", "Espera", "DPS", "DPS + rec.", "Impactos", "Tiempo", "Fuel/baja", "Tiros/tanque", "Grupo/tiro" };
             int[] widths = { 105, 65, 100, 65, 60, 80, 65, 85, 75, 85, 85 };

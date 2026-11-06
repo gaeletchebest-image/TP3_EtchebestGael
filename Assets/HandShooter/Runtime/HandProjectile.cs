@@ -6,7 +6,7 @@ namespace HandShooter
     public sealed class HandProjectile : MonoBehaviour
     {
         private Vector3 direction;
-        private float damage, speed, radius, remainingLife, remainingRange;
+        private float damage, speed, radius, remainingRange;
         private int hitMask;
         private HandWeapon owner;
         private int shotId;
@@ -15,6 +15,7 @@ namespace HandShooter
         private Material effectMaterial;
         private Color effectColor;
         private float effectDuration;
+        private ProjectileRangeWarning rangeWarning;
         private sealed class TargetMotion
         {
             public Vector3 Position;
@@ -35,8 +36,7 @@ namespace HandShooter
             damage = shotDamage;
             speed = settings.EvaluateProjectileSpeed(shotDamage);
             radius = Mathf.Max(0.01f, settings.projectileRadius);
-            remainingLife = settings.projectileLifetime;
-            remainingRange = settings.range;
+            remainingRange = Mathf.Max(0.1f, settings.projectileRange);
             hitMask = settings.hitMask.value & ~4;
             owner = weapon;
             // Snapshot the shot: changing the hand or settings does not change a projectile already in flight.
@@ -45,16 +45,14 @@ namespace HandShooter
             effectColor = settings.explosionColor;
             effectDuration = settings.explosionVisualDuration;
             transform.localScale = Vector3.one * radius * 2f;
-            var properties = new MaterialPropertyBlock();
-            properties.SetColor("_BaseColor", settings.projectileColor);
-            GetComponent<Renderer>().SetPropertyBlock(properties);
+            rangeWarning = new ProjectileRangeWarning(GetComponent<Renderer>(), settings.projectileColor, remainingRange);
             Physics.SyncTransforms();
             foreach (var target in FindObjectsByType<DamageTarget>(FindObjectsSortMode.None))
                 foreach (var collider in target.GetComponentsInChildren<Collider>())
                     if (!collider.isTrigger && (hitMask & (1 << collider.gameObject.layer)) != 0)
                         targetMotion[collider] = new TargetMotion { Position = collider.transform.position };
             initialized = true;
-            if (FindImpact(Vector3.zero, out var impact)) Detonate(impact.Collider, impact.Point, impact.Normal);
+            if (FindImpact(Vector3.zero, 1f, out var impact)) Detonate(impact.Collider, impact.Point, impact.Normal);
         }
         private void Update()
         {
@@ -63,10 +61,11 @@ namespace HandShooter
         public void Simulate(float deltaTime)
         {
             if (!initialized || deltaTime <= 0f) return;
-            float distance = Mathf.Min(speed * deltaTime, remainingRange, speed * Mathf.Max(0, remainingLife));
+            float stepDistance = speed * deltaTime;
+            float distance = Mathf.Min(stepDistance, remainingRange);
             // NavMesh agents move outside physics steps. Queries must see their latest collider poses.
             Physics.SyncTransforms();
-            if (FindImpact(direction * distance, out var hit))
+            if (FindImpact(direction * distance, distance / stepDistance, out var hit))
             {
                 transform.position += direction * (distance * hit.Fraction);
                 Detonate(hit.Collider, hit.Point, hit.Normal);
@@ -74,11 +73,11 @@ namespace HandShooter
             }
             transform.position += direction * distance;
             remainingRange -= distance;
-            remainingLife -= deltaTime;
-            if (remainingLife <= 0f || remainingRange <= 0f) { initialized = false; Destroy(gameObject); }
+            if (remainingRange <= 0f) Detonate(null, transform.position, Vector3.zero);
+            else rangeWarning.Update(remainingRange);
         }
 
-        private bool FindImpact(Vector3 displacement, out Impact impact)
+        private bool FindImpact(Vector3 displacement, float stepFraction, out Impact impact)
         {
             impact = new Impact { Fraction = float.PositiveInfinity };
             Vector3 start = transform.position;
@@ -104,7 +103,8 @@ namespace HandShooter
                 // Freeze the target at its current pose and sweep the projectile's relative motion.
                 // This also catches an enemy crossing completely through the shot between frames.
                 Vector3 relativeStart = start + movement;
-                Vector3 relativeDisplacement = displacement - movement;
+                // At maximum range, the projectile only exists for the first part of this step.
+                Vector3 relativeDisplacement = displacement - movement * stepFraction;
                 Vector3 closestPoint = collider.ClosestPoint(relativeStart);
                 if ((closestPoint - relativeStart).sqrMagnitude <= radius * radius)
                 {
@@ -160,7 +160,7 @@ namespace HandShooter
                 }
                 ExplosionEffect.Spawn(origin, explosion.Radius, effectDuration, effectMaterial, effectColor);
             }
-            var directTarget = collider.GetComponentInParent<DamageTarget>();
+            var directTarget = collider ? collider.GetComponentInParent<DamageTarget>() : null;
             // Combine direct and splash into one damage event for a useful total in the hit indicator.
             bool directReceivesSplash = directTarget && recipients.Remove(directTarget);
             foreach (var target in recipients) ApplyDamage(target, explosion.Damage);

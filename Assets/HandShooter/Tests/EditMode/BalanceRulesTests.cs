@@ -56,11 +56,16 @@ namespace HandShooter.Tests
             Assert.That(estimate.Reloads, Is.Zero);
             Assert.That(estimate.SustainedDps, Is.EqualTo(estimate.DamagePerSecond));
         }
-        [Test] public void ProjectileLifetimeAndTankCapacityCanMakeAKillImpossible()
+        [Test] public void ProjectileRangeIsIndependentOfDamageAndRayRange()
         {
-            settings.projectileLifetime = 0.1f;
-            Assert.That(Estimate(4, false, 24f, 10f).Reachable, Is.False);
-            Assert.That(Estimate(4, false, 24f, 10f).TimeToKill, Is.EqualTo(float.PositiveInfinity));
+            settings.projectileRange = 30f;
+            Assert.That(Estimate(4, false, 24f, 30f).Reachable, Is.True);
+            Assert.That(Estimate(1, false, 24f, 31f).Reachable, Is.False);
+            Assert.That(Estimate(4, false, 24f, 31f).TimeToKill, Is.EqualTo(float.PositiveInfinity));
+            Assert.That(Estimate(4, true, 24f, 31f).Reachable, Is.True);
+        }
+        [Test] public void TankCapacityCanMakeAKillImpossible()
+        {
             fuel.tankCapacity = 0.5f;
             Assert.That(Estimate(1, true, 1f).EnoughFuel, Is.False);
         }

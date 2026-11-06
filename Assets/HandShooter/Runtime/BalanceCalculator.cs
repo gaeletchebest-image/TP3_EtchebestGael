@@ -28,7 +28,7 @@ namespace HandShooter
             Reloads = ShotsPerTank == 0 ? 0 : (ShotsToKill - 1) / ShotsPerTank;
             FuelPerKill = ShotsToKill * FuelPerShot;
             FlightTime = shot.Hitscan ? 0f : Mathf.Max(0f, distance) / settings.EvaluateProjectileSpeed(shot.Damage);
-            Reachable = distance <= settings.range && (shot.Hitscan || FlightTime <= settings.projectileLifetime);
+            Reachable = distance <= (shot.Hitscan ? settings.range : Mathf.Max(0.1f, settings.projectileRange));
             EnoughFuel = ShotsPerTank > 0 && Reloads <= Mathf.Max(0, fuel.startingSpareTanks);
             // First shot is ready. Cooldown continues during reload, so the two waits overlap.
             TimeToKill = Reachable && EnoughFuel ? (ShotsToKill - 1) * Interval + FlightTime +

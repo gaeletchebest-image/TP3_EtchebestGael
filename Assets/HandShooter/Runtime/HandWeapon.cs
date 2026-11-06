@@ -10,6 +10,7 @@ namespace HandShooter
     public sealed class HandWeapon : MonoBehaviour
     {
         private const int IgnoreRaycastLayer = 2;
+        private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
         public ShooterSettings settings;
         public PrototypePlayer player;
@@ -166,17 +167,19 @@ namespace HandShooter
             recoil = 1f;
             Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
             int mask = settings.hitMask.value & ~4;
-            Vector3 end = ray.origin + ray.direction * settings.range;
-            if (Physics.Raycast(ray, out RaycastHit aimHit, settings.range, mask, QueryTriggerInteraction.Ignore)) end = aimHit.point;
+            float range = Mathf.Max(0f, settings.range);
+            Vector3 aimPoint = ray.GetPoint(range);
+            if (Physics.Raycast(ray, out RaycastHit aimHit, range, mask, QueryTriggerInteraction.Ignore)) aimPoint = aimHit.point;
             Vector3 start = muzzle.position;
-            Vector3 direction = (end - start).normalized;
+            Vector3 direction = (aimPoint - start).normalized;
             // A muzzle poking through a wall must not shoot through it.
             if (Physics.Linecast(ray.origin, start, out RaycastHit obstruction, mask, QueryTriggerInteraction.Ignore))
             {
                 if (stats.Hitscan)
                 {
-                    Damage(obstruction.collider, stats.Damage, shotId);
-                    DrawBeam(ray.origin, obstruction.point, settings.rayColor);
+                    if (obstruction.distance <= range) Damage(obstruction.collider, stats.Damage, shotId);
+                    Vector3 end = ray.origin + Vector3.ClampMagnitude(obstruction.point - ray.origin, range);
+                    DrawBeam(ray.origin, end, stats.Damage);
                 }
                 else
                 {
@@ -188,9 +191,13 @@ namespace HandShooter
             }
             if (stats.Hitscan)
             {
-                if (Physics.Raycast(start, direction, out RaycastHit hit, Vector3.Distance(start, end) + 0.02f, mask, QueryTriggerInteraction.Ignore))
-                { end = hit.point; Damage(hit.collider, stats.Damage, shotId); }
-                DrawBeam(start, end, settings.rayColor);
+                Vector3 end = start + direction * range;
+                if (Physics.Raycast(start, direction, out RaycastHit hit, range, mask, QueryTriggerInteraction.Ignore))
+                {
+                    end = hit.point;
+                    Damage(hit.collider, stats.Damage, shotId);
+                }
+                DrawBeam(start, end, stats.Damage);
             }
             else
             {
@@ -271,10 +278,11 @@ namespace HandShooter
                 DamageDealt?.Invoke(shotId, target, Mathf.Min(before, receivedDamage), before > 0f && target.Health <= 0f);
             }
         }
-        private void DrawBeam(Vector3 start, Vector3 end, Color color)
+        private void DrawBeam(Vector3 start, Vector3 end, float damage)
         {
+            Color color = settings.rayColor;
             var beam = new GameObject("Shot beam").AddComponent<LineRenderer>();
-            beam.gameObject.layer = 2;
+            beam.gameObject.layer = IgnoreRaycastLayer;
             beam.sharedMaterial = settings.beamMaterial;
             beam.startColor = beam.endColor = color;
             beam.startWidth = 0.025f;
@@ -282,7 +290,26 @@ namespace HandShooter
             beam.positionCount = 2;
             beam.SetPosition(0, start);
             beam.SetPosition(1, end);
-            Destroy(beam.gameObject, settings.beamDuration);
+
+            var endpoint = new GameObject("Beam endpoint", typeof(MeshFilter), typeof(MeshRenderer));
+            endpoint.layer = IgnoreRaycastLayer;
+            endpoint.transform.SetParent(beam.transform, false);
+            endpoint.transform.position = end;
+            // Compensate for perspective so distant hits still read as a small dot.
+            float diameter = Mathf.Clamp(Vector3.Distance(viewCamera.transform.position, end) * 0.01f, 0.055f, 1f);
+            // Scale volume with shot damage so the diameter grows more gradually.
+            float damageScale = Mathf.Pow(damage, 1f / 3f);
+            endpoint.transform.localScale = Vector3.one * (diameter * damageScale);
+            endpoint.GetComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Sphere.fbx");
+            var renderer = endpoint.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = settings.beamMaterial;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            var properties = new MaterialPropertyBlock();
+            properties.SetColor(BaseColor, Color.Lerp(color, Color.white, 0.4f));
+            renderer.SetPropertyBlock(properties);
+
+            Destroy(beam, settings.beamDuration);
+            Destroy(beam.gameObject, Mathf.Max(settings.beamDuration, 0.15f));
         }
         private void UpdateHandVisuals()
         {

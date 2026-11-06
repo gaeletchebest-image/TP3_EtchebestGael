@@ -41,12 +41,7 @@ namespace HandShooter
             Destroy(shot.GetComponent<Collider>());
             shot.transform.position = origin;
             shot.transform.localScale = Vector3.one * Mathf.Max(0.01f, settings.projectileRadius) * 2f;
-            var properties = new MaterialPropertyBlock();
-            properties.SetColor("_BaseColor", settings.projectileColor);
-            properties.SetColor("_Color", settings.projectileColor);
-            var renderer = shot.GetComponent<Renderer>();
-            if (projectileMaterial) renderer.sharedMaterial = projectileMaterial;
-            renderer.SetPropertyBlock(properties);
+            if (projectileMaterial) shot.GetComponent<Renderer>().sharedMaterial = projectileMaterial;
             shot.AddComponent<TurretProjectile>().Initialize(direction, settings, transform);
         }
     }

@@ -20,7 +20,8 @@ namespace HandShooter
         [Tooltip("Cuánto se reduce la velocidad por daño extra. 0 = sin reducción; 0.5 = la velocidad escala con la raíz inversa del daño relativo al daño base.")]
         [Min(0f)] public float projectileSpeedDamageExponent = 0.5f;
         [Min(0.01f)] public float projectileRadius = 0.09f;
-        [Min(0.1f)] public float projectileLifetime = 8f;
+        [Tooltip("Distancia máxima en metros antes de detonar.")]
+        [Min(0.1f)] public float projectileRange = 30f;
         public HandProjectile projectilePrefab;
         [Header("Explosión del proyectil")]
         [Tooltip("Fracción del daño DIRECTO. 0.5 = 50 %. El blanco impactado recibe directo + explosión.")]
@@ -34,6 +35,7 @@ namespace HandShooter
         [Min(0.05f)] public float explosionVisualDuration = 0.35f;
         public Color explosionColor = new Color(1f, 0.55f, 0.15f, 1f);
         [Header("Disparo")]
+        [Tooltip("Alcance del rayo en metros.")]
         [Min(1f)] public float range = 100f;
         public LayerMask hitMask = ~4;
         public bool automaticFire = true;

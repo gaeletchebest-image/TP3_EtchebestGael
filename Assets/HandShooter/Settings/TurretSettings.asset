@@ -19,8 +19,9 @@ MonoBehaviour:
   fireInterval: 1
   projectileSpeed: 12
   projectileRadius: 0.2
-  projectileLifetime: 5
+  projectileRange: 15
   projectileColor: {r: 1, g: 0, b: 0, a: 1}
+  explosionMaterial: {fileID: 2100000, guid: cd83be34633e3054f9ae124789dd04f4, type: 2}
   hitMask:
     serializedVersion: 2
     m_Bits: 51

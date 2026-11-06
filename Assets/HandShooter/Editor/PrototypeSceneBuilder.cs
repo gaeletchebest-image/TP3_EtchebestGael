@@ -216,6 +216,7 @@ namespace HandShooter.Editor
             if (!settings)
             {
                 settings = ScriptableObject.CreateInstance<TurretSettings>();
+                settings.explosionMaterial = Material("Beam", Color.white, true, "Universal Render Pipeline/Particles/Unlit");
                 AssetDatabase.CreateAsset(settings, path);
             }
             var body = GameObject.CreatePrimitive(PrimitiveType.Cube);

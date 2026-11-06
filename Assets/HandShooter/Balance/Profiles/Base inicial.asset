@@ -17,8 +17,9 @@ MonoBehaviour:
   fireInterval: 1
   projectileSpeed: 18
   projectileRadius: 0.12
-  projectileLifetime: 5
+  projectileRange: 20
   projectileColor: {r: 1, g: 0, b: 0, a: 1}
+  explosionMaterial: {fileID: 2100000, guid: cd83be34633e3054f9ae124789dd04f4, type: 2}
   hitMask:
     serializedVersion: 2
     m_Bits: 51
@@ -97,7 +98,7 @@ MonoBehaviour:
   projectileSpeed: 10
   projectileSpeedDamageExponent: 0.5
   projectileRadius: 0.09
-  projectileLifetime: 8
+  projectileRange: 30
   projectilePrefab: {fileID: 8072563373845372616, guid: d2c6a05da59ec19468aada5b6edf2992, type: 3}
   explosionDamageFraction: 0.5
   explosionBaseRadius: 1.25

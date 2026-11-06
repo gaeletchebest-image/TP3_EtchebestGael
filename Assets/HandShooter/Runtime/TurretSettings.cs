@@ -16,8 +16,10 @@ namespace HandShooter
         [Min(0.02f)] public float fireInterval = 1f;
         [Min(0.1f)] public float projectileSpeed = 8f;
         [Min(0.01f)] public float projectileRadius = 0.12f;
-        [Min(0.1f)] public float projectileLifetime = 5f;
+        [Tooltip("Distancia máxima en metros antes de detonar.")]
+        [Min(0.1f)] public float projectileRange = 20f;
         public Color projectileColor = Color.red;
+        public Material explosionMaterial;
         public LayerMask hitMask = ~4;
     }
 }
