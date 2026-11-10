@@ -18,12 +18,13 @@ namespace HandShooter.Editor
         [SerializeField] private bool ray = true, cover;
         [SerializeField] private BalanceScenario scenario;
         [SerializeField] private float spacing = 2.5f, timeLimit = 60f;
+        [SerializeField, Range(0f, 1f)] private float stationStartingFuel = 0.25f;
         [SerializeField] private string profileName = "Mi balance";
         [SerializeField] private Vector2 scroll, tableScroll;
         private string notice;
         private static readonly string[] Tabs = { "Ajustes", "Comparar", "Pruebas e historial", "Perfiles" };
         private static readonly string[] TargetNames = { "Torreta", "Kamikaze", "Sniper", "Hunter", "Blanco", "Vida personalizada" };
-        private static readonly string[] ScenarioNames = { "Blanco estático", "Hunter", "Sniper", "Grupo de kamikazes", "Torreta", "Grupo mixto" };
+        private static readonly string[] ScenarioNames = { "Blanco estático", "Hunter", "Sniper", "Grupo de kamikazes", "Torreta", "Grupo mixto", "Estación de llenado" };
 
         [MenuItem("Hand Shooter/Laboratorio de balance")]
         public static void Open()
@@ -70,6 +71,7 @@ namespace HandShooter.Editor
             }
             if (!draft.IsComplete)
             { EditorGUILayout.HelpBox("El borrador está incompleto. Revisá sus referencias en el Inspector.", MessageType.Error); return; }
+            if (!EditorApplication.isPlaying && !draft.refuelingStation) BalanceLabAssets.EnsureStationSettings(draft);
             GUILayout.Space(10);
             GUILayout.Label("LABORATORIO DE BALANCE", new GUIStyle(EditorStyles.boldLabel) { fontSize = 19 });
             EditorGUILayout.LabelField("BORRADOR  /  " + draft.title + "     ·     Editar → comparar → probar → guardar", EditorStyles.miniLabel);
@@ -105,6 +107,9 @@ namespace HandShooter.Editor
                     break;
                 case 1:
                     Fields(draft, "Combustible y recarga", "weapon.tankCapacity|Capacidad del tanque", "weapon.fuelPerDamage|Combustible por daño base", "weapon.startingSpareTanks|Tanques de repuesto iniciales", "weapon.reloadDuration|Duración de recarga (s)");
+                    if (draft.refuelingStation)
+                        Fields(draft.refuelingStation, "Estación de llenado", "fillDuration|Tiempo de 0% a 100% (s)", "interruptedFillFraction|Fracción conservada al salir (0–1)", "previewBrightness|Brillo de la barra de progreso (0–1)");
+                    EditorGUILayout.HelpBox("La estación no consume ni añade tanques. Al salir antes de completar entrega la fracción configurada del combustible acumulado.", MessageType.None);
                     break;
                 case 2:
                     Fields(draft.shooter, "Movimiento", "moveSpeed|Velocidad (m/s)", "dashSpeed|Velocidad del dash (m/s)", "dashDuration|Duración del dash (s)", "dashCooldown|Espera del dash (s)", "gravity|Gravedad", "fieldOfView|Campo de visión");
@@ -227,10 +232,15 @@ namespace HandShooter.Editor
             using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
             {
                 scenario = (BalanceScenario)EditorGUILayout.Popup("Escenario", (int)scenario, ScenarioNames);
-                distance = EditorGUILayout.Slider("Distancia inicial (m)", distance, 3f, 40f);
-                group = EditorGUILayout.IntSlider("Cantidad de enemigos", group, 1, 8);
-                spacing = EditorGUILayout.Slider("Separación (m)", spacing, 1.5f, 5f);
-                cover = EditorGUILayout.Toggle("Cobertura intermedia", cover);
+                using (new EditorGUI.DisabledScope(scenario == BalanceScenario.EstacionDeLlenado))
+                {
+                    distance = EditorGUILayout.Slider("Distancia inicial (m)", distance, 3f, 40f);
+                    group = EditorGUILayout.IntSlider("Cantidad de enemigos", group, 1, 8);
+                    spacing = EditorGUILayout.Slider("Separación (m)", spacing, 1.5f, 5f);
+                    cover = EditorGUILayout.Toggle("Cobertura intermedia", cover);
+                }
+                if (scenario == BalanceScenario.EstacionDeLlenado)
+                    stationStartingFuel = EditorGUILayout.Slider("Combustible inicial (fracción)", stationStartingFuel, 0f, 1f);
                 timeLimit = EditorGUILayout.Slider("Límite (s)", timeLimit, 5f, 180f);
                 fingers = EditorGUILayout.IntSlider("Dedos iniciales", fingers, 1, 4);
                 ray = EditorGUILayout.Toggle("Pulgar activo / rayo", ray);
@@ -247,6 +257,7 @@ namespace HandShooter.Editor
             }
             EditorGUILayout.HelpBox("WASD + mouse, clic para disparar, R para recargar, Tab para cambiar la mano y F5 para repetir. Cada repetición restablece posiciones, enemigos, combustible y espera del arma. Se conservan las últimas 100 pruebas localmente.", MessageType.Info);
             if (scenario == BalanceScenario.Hunter) EditorGUILayout.HelpBox("El hunter patrulla alrededor de su punto inicial y espera un tiempo aleatorio en cada destino. Al recibir daño te persigue; al verte dentro de su alcance dispara.", MessageType.None);
+            if (scenario == BalanceScenario.EstacionDeLlenado) EditorGUILayout.HelpBox("Estación a 4 m, sin enemigos. Entrá en la base y observá la barra oscura detrás del combustible. Salí antes de completar para probar la carga parcial. Dispará para gastar combustible y repetí; F5 restablece la prueba.", MessageType.None);
             if (scenario == BalanceScenario.Blanco) EditorGUILayout.HelpBox("Los blancos tienen la vida configurada en Mano. Usan el cuerpo de la torreta y permanecen inmóviles; acercalos para probar explosiones.", MessageType.None);
             Heading("Historial de pruebas");
             EditorGUILayout.BeginHorizontal();
@@ -284,6 +295,7 @@ namespace HandShooter.Editor
             session.profile = draft; session.scenario = scenario; session.distance = distance;
             session.enemyCount = group; session.spacing = spacing; session.cover = cover;
             session.timeLimit = timeLimit; session.fingers = fingers; session.ray = ray;
+            session.stationStartingFuel = stationStartingFuel;
             EditorUtility.SetDirty(session);
             EditorSceneManager.SaveScene(lab);
             EditorApplication.isPlaying = true;
@@ -337,7 +349,7 @@ namespace HandShooter.Editor
                 foreach (string diff in Differences(reference, draft)) EditorGUILayout.LabelField(diff, EditorStyles.wordWrappedLabel);
             }
             Heading("Aplicar al juego");
-            EditorGUILayout.HelpBox("Copia el borrador a los cinco archivos de ajustes del juego y al combustible del arma de la escena original. Los ajustes se guardan; si la escena original está abierta, guardala para conservar el combustible. Podés volver atrás cargando y aplicando «Base inicial».", MessageType.Info);
+            EditorGUILayout.HelpBox("Copia el borrador a los ajustes del juego, incluida la estación de llenado, y al combustible del arma de la escena original. Los ajustes se guardan; si la escena original está abierta, guardala para conservar el combustible. Podés volver atrás cargando y aplicando «Base inicial».", MessageType.Info);
             using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
                 if (GUILayout.Button("Aplicar borrador al juego", GUILayout.Height(32)))
                 { BalanceLabAssets.ApplyToGame(draft); notice = "Balance aplicado al juego. Si la escena original está abierta, guardala para conservar el combustible."; }
@@ -345,12 +357,13 @@ namespace HandShooter.Editor
 
         public static IEnumerable<string> Differences(BalanceProfile baseline, BalanceProfile current)
         {
-            UnityEngine.Object[] a = { baseline.shooter, baseline.turret, baseline.kamikaze, baseline.sniper, baseline.hunter, baseline };
-            UnityEngine.Object[] b = { current.shooter, current.turret, current.kamikaze, current.sniper, current.hunter, current };
-            string[] names = { "Mano", "Torreta", "Kamikaze", "Sniper", "Hunter", "Combustible" };
+            UnityEngine.Object[] a = { baseline.shooter, baseline.turret, baseline.kamikaze, baseline.sniper, baseline.hunter, baseline, baseline.refuelingStation };
+            UnityEngine.Object[] b = { current.shooter, current.turret, current.kamikaze, current.sniper, current.hunter, current, current.refuelingStation };
+            string[] names = { "Mano", "Torreta", "Kamikaze", "Sniper", "Hunter", "Combustible", "Estación" };
             int count = 0;
             for (int i = 0; i < a.Length; i++)
             {
+                if (!a[i] || !b[i]) continue;
                 var left = new SerializedObject(a[i]);
                 var right = new SerializedObject(b[i]);
                 var p = left.GetIterator();

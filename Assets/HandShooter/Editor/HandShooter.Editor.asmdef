@@ -1,1 +1,1 @@
-{"name":"HandShooter.Editor","references":["HandShooter.Runtime"],"includePlatforms":["Editor"]}
+{"name":"HandShooter.Editor","references":["HandShooter.Runtime","Unity.ProBuilder"],"includePlatforms":["Editor"]}

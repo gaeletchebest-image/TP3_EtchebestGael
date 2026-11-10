@@ -53,7 +53,7 @@ namespace HandShooter.Editor
         public static BalanceProfile Draft()
         {
             var existing = AssetDatabase.LoadAssetAtPath<BalanceProfile>(DraftPath);
-            if (existing) return existing;
+            if (existing) { EnsureStationSettings(existing); return existing; }
             EnsureFolder(ProfilesFolder);
             var source = ScriptableObject.CreateInstance<BalanceProfile>();
             source.title = "Base actual";
@@ -62,6 +62,7 @@ namespace HandShooter.Editor
             source.kamikaze = AssetDatabase.LoadAssetAtPath<KamikazeSettings>("Assets/HandShooter/Settings/KamikazeSettings.asset");
             source.sniper = AssetDatabase.LoadAssetAtPath<SniperSettings>(SniperSetup.SettingsPath);
             source.hunter = AssetDatabase.LoadAssetAtPath<HunterSettings>(HunterSetup.SettingsPath);
+            source.refuelingStation = RefuelingStationSetup.EnsureSettings();
             var scene = SceneManager.GetSceneByPath(PrototypeSceneBuilder.ScenePath);
             bool opened = !scene.isLoaded;
             if (opened) scene = EditorSceneManager.OpenScene(PrototypeSceneBuilder.ScenePath, OpenSceneMode.Additive);
@@ -85,6 +86,7 @@ namespace HandShooter.Editor
             result.kamikaze = AddCopy(source.kamikaze, result);
             result.sniper = AddCopy(source.sniper, result);
             result.hunter = AddCopy(source.hunter, result);
+            result.refuelingStation = AddCopy(source.refuelingStation ? source.refuelingStation : RefuelingStationSetup.EnsureSettings(), result);
             EditorUtility.SetDirty(result);
             AssetDatabase.SaveAssets();
             return result;
@@ -107,14 +109,25 @@ namespace HandShooter.Editor
             EditorUtility.SetDirty(to);
         }
 
+        public static void EnsureStationSettings(BalanceProfile profile)
+        {
+            if (!profile || profile.refuelingStation) return;
+            profile.refuelingStation = AddCopy(RefuelingStationSetup.EnsureSettings(), profile);
+            EditorUtility.SetDirty(profile);
+            AssetDatabase.SaveAssets();
+        }
+
         public static void LoadInto(BalanceProfile source, BalanceProfile destination)
         {
             if (source == destination || !source.IsComplete || !destination.IsComplete) return;
+            EnsureStationSettings(source);
+            EnsureStationSettings(destination);
             CopySettings(source.shooter, destination.shooter);
             CopySettings(source.turret, destination.turret);
             CopySettings(source.kamikaze, destination.kamikaze);
             CopySettings(source.sniper, destination.sniper);
             CopySettings(source.hunter, destination.hunter);
+            CopySettings(source.refuelingStation, destination.refuelingStation);
             Undo.RecordObject(destination, "Cargar perfil");
             destination.title = source.title; destination.notes = source.notes;
             destination.weapon = JsonUtility.FromJson<WeaponBalance>(JsonUtility.ToJson(source.weapon));
@@ -124,6 +137,8 @@ namespace HandShooter.Editor
 
         public static void ApplyToGame(BalanceProfile draft)
         {
+            EnsureStationSettings(draft);
+            CopySettings(draft.refuelingStation, RefuelingStationSetup.EnsureSettings());
             CopySettings(draft.shooter, AssetDatabase.LoadAssetAtPath<ShooterSettings>(PrototypeSceneBuilder.SettingsPath));
             CopySettings(draft.turret, AssetDatabase.LoadAssetAtPath<TurretSettings>("Assets/HandShooter/Settings/TurretSettings.asset"));
             CopySettings(draft.kamikaze, AssetDatabase.LoadAssetAtPath<KamikazeSettings>("Assets/HandShooter/Settings/KamikazeSettings.asset"));
@@ -142,7 +157,23 @@ namespace HandShooter.Editor
 
         public static void EnsureScene(BalanceProfile draft)
         {
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath)) return;
+            EnsureStationSettings(draft);
+            var stationPrefab = RefuelingStationSetup.EnsurePrefab();
+            // Existing laboratory scenes also need to be loadable when repeating a trial.
+            if (!EditorBuildSettings.scenes.Any(s => s.path == ScenePath && s.enabled))
+                EditorBuildSettings.scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath)
+                    .Concat(new[] { new EditorBuildSettingsScene(ScenePath, true) }).ToArray();
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath))
+            {
+                var existing = SceneManager.GetSceneByPath(ScenePath);
+                bool opened = !existing.isLoaded;
+                if (opened) existing = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+                var labSession = existing.GetRootGameObjects().Select(g => g.GetComponent<BalanceLabSession>()).First(s => s);
+                labSession.refuelingStationPrefab = stationPrefab;
+                EditorSceneManager.MarkSceneDirty(existing);
+                if (opened) { EditorSceneManager.SaveScene(existing); EditorSceneManager.CloseScene(existing, true); }
+                return;
+            }
             if (!AssetDatabase.CopyAsset(PrototypeSceneBuilder.ScenePath, ScenePath))
                 throw new InvalidOperationException("No se pudo copiar la escena del prototipo.");
             var previous = SceneManager.GetActiveScene();
@@ -163,6 +194,7 @@ namespace HandShooter.Editor
             session.kamikazePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeSceneBuilder.KamikazePrefabPath);
             session.sniperPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SniperSetup.PrefabPath);
             session.hunterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(HunterSetup.PrefabPath);
+            session.refuelingStationPrefab = stationPrefab;
             var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             floor.name = "Suelo del laboratorio";
             floor.transform.position = new Vector3(0f, -0.25f, 20f);

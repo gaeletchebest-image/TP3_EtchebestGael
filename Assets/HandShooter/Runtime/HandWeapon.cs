@@ -38,9 +38,12 @@ namespace HandShooter
         public float Fuel { get; private set; }
         public int SpareTankCount { get; private set; }
         public bool IsReloading { get; private set; }
+        public RefuelingStation ActiveRefuelingStation { get; internal set; }
+        public float RefuelPreviewFraction => tankCapacity <= 0f ? 0f :
+            Mathf.Clamp01((Fuel + (ActiveRefuelingStation ? ActiveRefuelingStation.PendingFuel : 0f)) / tankCapacity);
         internal bool HasUnlimitedFuel => Hand != null && !Hand.ThumbUnlocked;
         public float FuelFraction => HasUnlimitedFuel ? 1f : tankCapacity <= 0f ? 0f : Fuel / tankCapacity;
-        private bool CanReload => !HasUnlimitedFuel && !IsReloading && SpareTankCount > 0 && Fuel < tankCapacity;
+        private bool CanReload => !HasUnlimitedFuel && !IsReloading && !ActiveRefuelingStation && SpareTankCount > 0 && Fuel < tankCapacity;
         internal float GetFuelCost(ShotStats stats) => HasUnlimitedFuel ? 0f : settings.EvaluateFuelCost(stats, fuelPerDamage);
         public event Action<float> Hit;
         public event Action FuelChanged;
@@ -293,6 +296,7 @@ namespace HandShooter
 
         internal void RestoreState(SavedGame.Weapon state)
         {
+            if (ActiveRefuelingStation) ActiveRefuelingStation.CancelFill(false);
             Hand.ThumbUnlocked = !startsWithoutThumb || state.thumbUnlocked;
             Hand.TryApply(state.mask, state.thumb);
             Fuel = Mathf.Clamp(state.fuel, 0f, tankCapacity);
@@ -304,6 +308,14 @@ namespace HandShooter
             RequireTriggerRelease();
             FuelChanged?.Invoke();
         }
+        // Stations replenish the current fuel without changing capacity or spare tanks.
+        public void AddFuel(float amount)
+        {
+            if (amount <= 0f || float.IsNaN(amount)) return;
+            Fuel = Mathf.Clamp(Fuel + amount, 0f, tankCapacity);
+            FuelChanged?.Invoke();
+        }
+
         public void AddFuelTank(int count = 1)
         {
             if (count <= 0) return;

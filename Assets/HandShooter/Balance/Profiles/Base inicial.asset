@@ -153,6 +153,7 @@ MonoBehaviour:
   kamikaze: {fileID: -5609697396651511293}
   sniper: {fileID: 3164295853511200041}
   hunter: {fileID: -6892653901053487359}
+  refuelingStation: {fileID: 5653872383909566587}
   weapon:
     tankCapacity: 100
     fuelPerDamage: 1
@@ -190,3 +191,18 @@ MonoBehaviour:
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &5653872383909566587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbec17cd4d4ae9a48a4ffae6f1dd4e19, type: 3}
+  m_Name: RefuelingStationSettings
+  m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.RefuelingStationSettings
+  fillDuration: 2
+  interruptedFillFraction: 0.5
+  previewBrightness: 0.55

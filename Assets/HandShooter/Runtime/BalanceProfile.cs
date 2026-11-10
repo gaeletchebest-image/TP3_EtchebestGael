@@ -26,7 +26,7 @@ namespace HandShooter
         };
     }
 
-    // Each saved profile owns its five settings as sub-assets. Visual/prefab references stay shared.
+    // Each saved profile owns its settings as sub-assets. Visual/prefab references stay shared.
     public sealed class BalanceProfile : ScriptableObject
     {
         public string title = "Nuevo balance";
@@ -36,6 +36,7 @@ namespace HandShooter
         public KamikazeSettings kamikaze;
         public SniperSettings sniper;
         public HunterSettings hunter;
+        public RefuelingStationSettings refuelingStation;
         public WeaponBalance weapon = new WeaponBalance();
         public bool IsComplete => shooter && turret && kamikaze && sniper && hunter && weapon != null;
 
@@ -43,14 +44,15 @@ namespace HandShooter
         {
             title = title, notes = notes, shooter = JsonUtility.ToJson(shooter),
             turret = JsonUtility.ToJson(turret), kamikaze = JsonUtility.ToJson(kamikaze),
-            sniper = JsonUtility.ToJson(sniper), hunter = JsonUtility.ToJson(hunter), weapon = weapon
+            sniper = JsonUtility.ToJson(sniper), hunter = JsonUtility.ToJson(hunter),
+            refuelingStation = refuelingStation ? JsonUtility.ToJson(refuelingStation) : "", weapon = weapon
         });
     }
 
     [Serializable]
     public sealed class BalanceSnapshot
     {
-        public string title, notes, shooter, turret, kamikaze, sniper, hunter;
+        public string title, notes, shooter, turret, kamikaze, sniper, hunter, refuelingStation;
         public WeaponBalance weapon;
     }
 }

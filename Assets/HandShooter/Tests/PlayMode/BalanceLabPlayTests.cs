@@ -37,6 +37,8 @@ namespace HandShooter.Tests
             session.RuntimeProfile.shooter.baseDamage = sourceDamage + 99f;
             Assert.That(session.profile.shooter.baseDamage, Is.EqualTo(sourceDamage));
             var weapon = session.player.weapon;
+            // This test changes damage to verify isolation; keep its shot affordable for any saved capacity.
+            weapon.fuelPerDamage = weapon.tankCapacity * 0.1f / weapon.Stats.Damage;
             Assert.That(weapon.TryFire(), Is.True);
             Assert.That(weapon.Fuel, Is.LessThan(weapon.tankCapacity));
             session.RestartTrial();
@@ -99,6 +101,16 @@ namespace HandShooter.Tests
                 session.player.enabled = false;
                 session.player.SetMenuOpen(true);
                 var targets = Object.FindObjectsByType<DamageTarget>(FindObjectsSortMode.None);
+                if (kind == BalanceScenario.EstacionDeLlenado)
+                {
+                    Assert.That(targets, Is.Empty);
+                    var station = Object.FindFirstObjectByType<RefuelingStation>();
+                    Assert.That(station, Is.Not.Null);
+                    Assert.That(station.settings, Is.SameAs(session.RuntimeProfile.refuelingStation));
+                    Assert.That(station.settings, Is.Not.SameAs(session.profile.refuelingStation));
+                    Assert.That(session.player.weapon.FuelFraction, Is.EqualTo(session.stationStartingFuel).Within(0.001f));
+                    continue;
+                }
                 Assert.That(targets.Length, Is.EqualTo(count), $"{kind}: {count} enemigos");
                 Assert.That(GameObject.Find("Cobertura"), Is.Not.Null);
                 foreach (var target in targets)

@@ -34,9 +34,9 @@ Transform:
   m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 7123456789012345002}
   - {fileID: 5429954302413252358}
   - {fileID: 7169331507389478099}
-  - {fileID: 7123456789012345002}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &3103676742995474848
@@ -132,7 +132,13 @@ MonoBehaviour:
   settings: {fileID: 0}
   turretSettings: {fileID: 0}
   kamikazeSettings: {fileID: 11400000, guid: a39c47a3caf591c48860c7353ff041a4, type: 2}
+  sniperSettings: {fileID: 0}
+  hunterSettings: {fileID: 0}
   label: {fileID: 5467065862271278955}
+  showVitals: 0
+  practiceHealthOverride: 0
+  practiceDefensePoints: 0
+  practiceDefenseBarCapacity: 1
 --- !u!114 &4581662205246098213
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -237,7 +243,7 @@ TextMesh:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2066118129496820057}
-  m_Text: ''
+  m_Text: 
   m_OffsetZ: 0
   m_CharacterSize: 0.035
   m_LineSpacing: 1
@@ -420,11 +426,12 @@ MeshRenderer:
   m_IgnoreNormalsForChartDetection: 0
   m_ImportantGI: 0
   m_StitchLightmapSeams: 1
-  m_LightmapParameters: {fileID: 0}
   m_SelectedEditorRenderState: 3
   m_MinimumChartSize: 4
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0

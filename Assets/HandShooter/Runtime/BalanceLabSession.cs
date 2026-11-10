@@ -13,6 +13,8 @@ namespace HandShooter
         public BalanceProfile profile;
         public PrototypePlayer player;
         public GameObject turretPrefab, kamikazePrefab, sniperPrefab, hunterPrefab;
+        public GameObject refuelingStationPrefab;
+        [Range(0f, 1f)] public float stationStartingFuel = 0.25f;
         public BalanceScenario scenario;
         [Min(2f)] public float distance = 12f;
         [Range(1, 8)] public int enemyCount = 3;
@@ -36,7 +38,7 @@ namespace HandShooter
         private sealed class Setup
         {
             public BalanceScenario scenario;
-            public float distance, spacing, timeLimit;
+            public float distance, spacing, timeLimit, stationStartingFuel;
             public int enemyCount, fingers;
             public bool cover, ray;
         }
@@ -58,6 +60,9 @@ namespace HandShooter
             RuntimeProfile.kamikaze = Clone(profile.kamikaze);
             RuntimeProfile.sniper = Clone(profile.sniper);
             RuntimeProfile.hunter = Clone(profile.hunter);
+            // Old profiles remain usable; editor migrations attach an owned settings sub-asset.
+            RuntimeProfile.refuelingStation = profile.refuelingStation ? Clone(profile.refuelingStation) : ScriptableObject.CreateInstance<RefuelingStationSettings>();
+            if (!profile.refuelingStation) owned.Add(RuntimeProfile.refuelingStation);
             RuntimeProfile.weapon = JsonUtility.FromJson<WeaponBalance>(JsonUtility.ToJson(profile.weapon));
             player.settings = player.weapon.settings = RuntimeProfile.shooter;
             player.spawnDefaultFuelPickups = false;
@@ -71,8 +76,15 @@ namespace HandShooter
             // Let player/weapon/HUD initialize before subscribing or starting the clock.
             yield return null;
             enemyCount = Mathf.Clamp(enemyCount, 1, 8);
+            if (scenario == BalanceScenario.EstacionDeLlenado)
+            {
+                var state = player.weapon.CaptureState();
+                state.fuel = player.weapon.tankCapacity * Mathf.Clamp01(stationStartingFuel);
+                player.weapon.RestoreState(state);
+            }
             var setup = new Setup { scenario = scenario, distance = distance, spacing = spacing,
-                timeLimit = timeLimit, enemyCount = enemyCount, fingers = fingers, cover = cover, ray = ray };
+                timeLimit = timeLimit, enemyCount = enemyCount, fingers = fingers, cover = cover, ray = ray,
+                stationStartingFuel = stationStartingFuel };
             Trial = new BalanceTrial(new BalanceTrialResult
             {
                 id = Guid.NewGuid().ToString("N"), utc = DateTime.UtcNow.ToString("O"),
@@ -93,6 +105,20 @@ namespace HandShooter
             var root = new GameObject("Encuentro");
             root.transform.SetParent(transform);
             root.SetActive(false);
+            if (scenario == BalanceScenario.EstacionDeLlenado)
+            {
+                if (!refuelingStationPrefab)
+                    Debug.LogError("El laboratorio necesita el prefab de estación de llenado.", this);
+                else
+                {
+                    var station = Instantiate(refuelingStationPrefab, root.transform).GetComponent<RefuelingStation>();
+                    station.settings = RuntimeProfile.refuelingStation;
+                    station.transform.position = new Vector3(0f, 0f, 4f);
+                }
+                root.SetActive(true);
+                Physics.SyncTransforms();
+                return;
+            }
             if (cover)
             {
                 var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -180,6 +206,8 @@ namespace HandShooter
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(source.kamikaze), RuntimeProfile.kamikaze);
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(source.sniper), RuntimeProfile.sniper);
             JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(source.hunter), RuntimeProfile.hunter);
+            if (source.refuelingStation)
+                JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(source.refuelingStation), RuntimeProfile.refuelingStation);
             RuntimeProfile.weapon = JsonUtility.FromJson<WeaponBalance>(JsonUtility.ToJson(source.weapon));
             RuntimeProfile.title = source.title;
             RuntimeProfile.notes = source.notes;
@@ -195,8 +223,18 @@ namespace HandShooter
             // Match the reference height of the existing HUD at higher Game View resolutions.
             float scale = Mathf.Max(1f, Screen.height / 768f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
-            GUILayout.BeginArea(new Rect(16, 16, 325, Trial.Finished ? 310 : 200), GUI.skin.box);
-            GUILayout.Label("LABORATORIO / " + scenario, hudText);
+            float height = Trial.Finished ? 310f : 200f;
+            if (scenario == BalanceScenario.EstacionDeLlenado) height += 100f;
+            GUILayout.BeginArea(new Rect(16, 16, 325, height), GUI.skin.box);
+            GUILayout.Label("LABORATORIO / " + (scenario == BalanceScenario.EstacionDeLlenado ? "ESTACIÓN DE LLENADO" : scenario.ToString()), hudText);
+            if (scenario == BalanceScenario.EstacionDeLlenado)
+            {
+                GUILayout.Label("Subí a la base. Salí antes de completar para recibir la fracción configurada de la carga acumulada.", hudText);
+                var station = player.weapon.ActiveRefuelingStation;
+                GUILayout.Label($"Combustible: {player.weapon.Fuel:0.#}/{player.weapon.tankCapacity:0.#}\n" +
+                    (station ? $"Carga: {station.Progress:P0} · Al salir: +{station.PendingFuel * Mathf.Clamp01(RuntimeProfile.refuelingStation.interruptedFillFraction):0.#}" :
+                    $"De 0% a 100%: {RuntimeProfile.refuelingStation.fillDuration:0.##} s"), hudText);
+            }
             var r = Trial.Result;
             GUILayout.Label($"{r.seconds:0.0} s   ·   {r.kills} bajas\n{r.shots} disparos   ·   {r.Accuracy:P0} aciertos\n{r.fuelSpent:0.##} combustible   ·   {r.reloads} recargas", hudText);
             if (r.settingsChanged) GUILayout.Label("Ajustes cambiados durante esta prueba", hudText);

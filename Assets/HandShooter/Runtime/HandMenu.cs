@@ -11,6 +11,7 @@ namespace HandShooter
         public HandWeapon weapon;
         public Canvas canvas;
         public Image fuelFill;
+        public Image refuelPreview;
         public RectTransform fuelFillRect;
         public Text fuelLabel, tankLabel, debugText, controls, crosshair, hitText;
         public Image dashCooldownFill;
@@ -52,7 +53,18 @@ namespace HandShooter
                 return;
             }
             if (crosshair) crosshair.text = "+";
+            EnsureRefuelPreview();
             BuildMenu();
+        }
+        public void EnsureRefuelPreview()
+        {
+            if (refuelPreview || !fuelFillRect) return;
+            var preview = new GameObject("Refuel Preview", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            preview.transform.SetParent(fuelFillRect.parent, false);
+            preview.transform.SetSiblingIndex(fuelFillRect.GetSiblingIndex());
+            refuelPreview = preview.GetComponent<Image>();
+            refuelPreview.raycastTarget = false;
+            refuelPreview.enabled = false;
         }
         internal static void EnsureEventSystem()
         {
@@ -164,7 +176,19 @@ namespace HandShooter
             fuelFillRect.anchorMax = new Vector2(fuelFraction, 1f);
             fuelFillRect.offsetMin = fuelFillRect.offsetMax = Vector2.zero;
             fuelFill.color = fuelFraction <= 0.25f ? orange : mint;
-            fuelLabel.text = "COMBUSTIBLE";
+            var station = weapon.ActiveRefuelingStation;
+            if (refuelPreview)
+            {
+                refuelPreview.enabled = station;
+                var rect = refuelPreview.rectTransform;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = new Vector2(weapon.RefuelPreviewFraction, 1f);
+                rect.offsetMin = rect.offsetMax = Vector2.zero;
+                float brightness = station ? station.settings.previewBrightness : 0.55f;
+                Color color = fuelFill.color;
+                refuelPreview.color = new Color(color.r * brightness, color.g * brightness, color.b * brightness, color.a);
+            }
+            fuelLabel.text = station ? $"CARGANDO COMBUSTIBLE · {station.Progress:P0}" : "COMBUSTIBLE";
             string fuel = unlimitedFuel ? "INFINITO" : $"{weapon.Fuel:0}/{weapon.tankCapacity:0}";
             tankLabel.text = $"{fuel}   ·   TANQUES ×{weapon.SpareTankCount}";
             debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.GetFuelCost(stats):0.##} COMBUSTIBLE / DISPARO";

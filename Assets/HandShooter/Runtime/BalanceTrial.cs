@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace HandShooter
 {
-    public enum BalanceScenario { Blanco, Hunter, Sniper, Kamikazes, Torreta, GrupoMixto }
+    public enum BalanceScenario { Blanco, Hunter, Sniper, Kamikazes, Torreta, GrupoMixto, EstacionDeLlenado }
 
     [Serializable]
     public sealed class BalanceTrialResult
