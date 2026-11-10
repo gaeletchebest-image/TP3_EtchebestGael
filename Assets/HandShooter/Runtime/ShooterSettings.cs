@@ -12,7 +12,7 @@ namespace HandShooter
         [Tooltip("Segundos entre disparos con 0, 1, 2 y 3 dedos inactivos, respectivamente.")]
         public float[] cooldownByInactiveFingers = { 1f, 0.65f, 0.4f, 0.2f };
         [Header("Pulgar inactivo / proyectil (activo usa valores base)")]
-        [Min(0.01f)] public float projectileDamageMultiplier = 2f;
+        [Min(0.01f)] public float projectileDamageMultiplier = 1f;
         [Min(0.01f)] public float projectileCooldownMultiplier = 2f;
         [Tooltip("Descuento de combustible del proyectil respecto al rayo. 0.5 = consume 50 % menos para el mismo daño base.")]
         [Range(0f, 1f)] public float projectileFuelEfficiency = 0.5f;

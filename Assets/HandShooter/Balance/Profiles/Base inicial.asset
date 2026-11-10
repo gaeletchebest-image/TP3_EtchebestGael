@@ -92,7 +92,7 @@ MonoBehaviour:
   - 0.65
   - 0.4
   - 0.2
-  projectileDamageMultiplier: 2
+  projectileDamageMultiplier: 1
   projectileCooldownMultiplier: 2
   projectileFuelEfficiency: 0.5
   projectileSpeed: 10

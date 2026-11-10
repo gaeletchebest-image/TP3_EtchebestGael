@@ -188,9 +188,11 @@ namespace HandShooter
                 presetFeedback.text = "Se conservan al reiniciar. En partida: 1–9 / 0 para cambiar.";
             mode.text = stats.Hitscan ? "RAYCAST / INSTANTÁNEO" : "PROYECTIL / EXPLOSIVO";
             mode.color = accent;
+            float projectileTotalMultiplier = weapon.settings.projectileDamageMultiplier *
+                (1f + weapon.settings.explosionDamageFraction);
             rules.text = "Siempre queda al menos un cañón activo.\nLos dedos activos forman un solo grupo.\n" +
                 (hand.ThumbUnlocked
-                    ? $"Pulgar activo: raycast, valores base.\nProyectil: daño ×{weapon.settings.projectileDamageMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}, combustible −{weapon.settings.projectileFuelEfficiency:P0}.\nExplosión: {weapon.settings.explosionDamageFraction:P0} del daño directo."
+                    ? $"Pulgar activo: raycast, valores base.\nProyectil: daño ×{projectileTotalMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}, combustible −{weapon.settings.projectileFuelEfficiency:P0}.\nDaño total con explosión ({weapon.settings.explosionDamageFraction:P0} del directo)."
                     : "La mano dispara en modo láser hasta que recojas el pulgar.");
             menuStats.text = $"{stats.Damage:0.##}    DAÑO POR DISPARO\n\n{stats.Interval:0.##} s    ENTRE DISPAROS\n{1f / stats.Interval:0.##}    DISPAROS / SEGUNDO";
             if (!stats.Hitscan) menuStats.text += $"\nEXPLOSIÓN {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
@@ -207,7 +209,7 @@ namespace HandShooter
             thumb.image.color = hand.ThumbUnlocked ? (hand.ThumbActive ? mint : orange) : muted;
             thumbText.color = new Color(0.025f, 0.07f, 0.08f);
             thumbText.text = hand.ThumbUnlocked
-                ? $"PULGAR {(hand.ThumbActive ? "ACTIVO" : "INACTIVO")}\n{(hand.ThumbActive ? "Raycast · daño y espera base" : $"Proyectil · daño ×{weapon.settings.projectileDamageMultiplier:0.##} / espera ×{weapon.settings.projectileCooldownMultiplier:0.##}")}"
+                ? $"PULGAR {(hand.ThumbActive ? "ACTIVO" : "INACTIVO")}\n{(hand.ThumbActive ? "Raycast · daño y espera base" : $"Proyectil · daño ×{projectileTotalMultiplier:0.##} / espera ×{weapon.settings.projectileCooldownMultiplier:0.##}")}"
                 : "PULGAR SIN EQUIPAR\nModo láser";
         }
 

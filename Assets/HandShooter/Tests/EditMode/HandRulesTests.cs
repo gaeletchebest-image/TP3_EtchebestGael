@@ -13,16 +13,19 @@ namespace HandShooter.Tests
         [TestCase(2, true, 2f, 0.4f)]
         [TestCase(3, true, 4f, 0.65f)]
         [TestCase(4, true, 8f, 1f)]
-        [TestCase(1, false, 2f, 0.4f)]
-        [TestCase(2, false, 4f, 0.8f)]
-        [TestCase(3, false, 8f, 1.3f)]
-        [TestCase(4, false, 16f, 2f)]
+        [TestCase(1, false, 1f, 0.4f)]
+        [TestCase(2, false, 2f, 0.8f)]
+        [TestCase(3, false, 4f, 1.3f)]
+        [TestCase(4, false, 8f, 2f)]
         public void DefaultCombinations(int count, bool thumb, float damage, float interval)
         {
             ShotStats shot = settings.Evaluate(new HandConfiguration(count, thumb));
             Assert.That(shot.Damage, Is.EqualTo(damage).Within(0.0001f));
             Assert.That(shot.Interval, Is.EqualTo(interval).Within(0.0001f));
             Assert.That(shot.Hitscan, Is.EqualTo(thumb));
+            if (!thumb)
+                Assert.That(shot.Damage + settings.EvaluateExplosion(shot.Damage).Damage,
+                    Is.EqualTo(damage * 1.5f).Within(0.0001f));
         }
         [Test] public void InspectorValuesDriveTheShot()
         {

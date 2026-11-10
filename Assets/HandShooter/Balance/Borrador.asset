@@ -78,7 +78,7 @@ MonoBehaviour:
   - 0.65
   - 0.4
   - 0.2
-  projectileDamageMultiplier: 2
+  projectileDamageMultiplier: 1
   projectileCooldownMultiplier: 2
   projectileFuelEfficiency: 0.5
   projectileSpeed: 10
@@ -132,7 +132,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b0f6343e864f3e348b46ebd69fc02ff2, type: 3}
   m_Name: HunterSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.HunterSettings
-  initialHealth: 24
+  initialHealth: 12
   initialDefensePoints: 0
   defenseBarCapacity: 3
   range: 5

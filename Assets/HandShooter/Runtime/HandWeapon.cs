@@ -194,39 +194,61 @@ namespace HandShooter
             if (Physics.Raycast(ray, out RaycastHit aimHit, range, mask, QueryTriggerInteraction.Ignore)) aimPoint = aimHit.point;
             Vector3 start = muzzle.position;
             Vector3 direction = (aimPoint - start).normalized;
+            if (stats.Hitscan)
+            {
+                Vector3 muzzleOffset = start - ray.origin;
+                if (FindBeamObstruction(ray.origin, muzzleOffset.normalized, muzzleOffset.magnitude, mask,
+                    out RaycastHit beamObstruction))
+                    FireBeam(ray.origin, muzzleOffset.normalized, Mathf.Min(range, beamObstruction.distance), mask, stats.Damage, shotId);
+                else
+                    FireBeam(start, direction, range, mask, stats.Damage, shotId);
+                return true;
+            }
             // A muzzle poking through a wall must not shoot through it.
             if (Physics.Linecast(ray.origin, start, out RaycastHit obstruction, mask, QueryTriggerInteraction.Ignore))
             {
-                if (stats.Hitscan)
-                {
-                    if (obstruction.distance <= range) Damage(obstruction.collider, stats.Damage, shotId);
-                    Vector3 end = ray.origin + Vector3.ClampMagnitude(obstruction.point - ray.origin, range);
-                    DrawBeam(ray.origin, end, stats.Damage);
-                }
-                else
-                {
-                    var blockedProjectile = Instantiate(settings.projectilePrefab, ray.origin, Quaternion.LookRotation(direction));
-                    blockedProjectile.Initialize(direction, stats.Damage, settings, this, shotId);
-                    blockedProjectile.Detonate(obstruction.collider, obstruction.point, obstruction.normal);
-                }
+                var blockedProjectile = Instantiate(settings.projectilePrefab, ray.origin, Quaternion.LookRotation(direction));
+                blockedProjectile.Initialize(direction, stats.Damage, settings, this, shotId);
+                blockedProjectile.Detonate(obstruction.collider, obstruction.point, obstruction.normal);
                 return true;
             }
-            if (stats.Hitscan)
+
+            HandProjectile projectile = Instantiate(settings.projectilePrefab, start, Quaternion.LookRotation(direction));
+            projectile.Initialize(direction, stats.Damage, settings, this, shotId);
+            return true;
+        }
+        private static bool FindBeamObstruction(Vector3 origin, Vector3 direction, float distance, int mask,
+            out RaycastHit obstruction)
+        {
+            obstruction = default;
+            bool found = false;
+            foreach (var hit in Physics.RaycastAll(origin, direction, distance, mask, QueryTriggerInteraction.Ignore))
             {
-                Vector3 end = start + direction * range;
-                if (Physics.Raycast(start, direction, out RaycastHit hit, range, mask, QueryTriggerInteraction.Ignore))
+                if (!hit.collider.GetComponentInParent<DamageTarget>() && (!found || hit.distance < obstruction.distance))
+                {
+                    obstruction = hit;
+                    found = true;
+                }
+            }
+            return found;
+        }
+        private void FireBeam(Vector3 start, Vector3 direction, float range, int mask, float damage, int shotId)
+        {
+            Vector3 end = start + direction * range;
+            var hits = Physics.RaycastAll(start, direction, range, mask, QueryTriggerInteraction.Ignore);
+            Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+            var damaged = new HashSet<DamageTarget>();
+            foreach (var hit in hits)
+            {
+                var target = hit.collider.GetComponentInParent<DamageTarget>();
+                if (!target)
                 {
                     end = hit.point;
-                    Damage(hit.collider, stats.Damage, shotId);
+                    break;
                 }
-                DrawBeam(start, end, stats.Damage);
+                if (damaged.Add(target)) Damage(target, damage, shotId);
             }
-            else
-            {
-                HandProjectile projectile = Instantiate(settings.projectilePrefab, start, Quaternion.LookRotation(direction));
-                projectile.Initialize(direction, stats.Damage, settings, this, shotId);
-            }
-            return true;
+            DrawBeam(start, end, damage);
         }
         public bool ReloadFuel()
         {

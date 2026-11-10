@@ -5275,6 +5275,8 @@ MonoBehaviour:
   - {fileID: 527352408}
   - {fileID: 2118103281}
   thumbVisual: {fileID: 2075358014}
+  startsUnequipped: 0
+  startsWithoutThumb: 0
   tankCapacity: 100
   fuelPerDamage: 1
   startingSpareTanks: 2
@@ -6250,7 +6252,7 @@ MonoBehaviour:
   kamikazePrefab: {fileID: 165657618624421186, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
   sniperPrefab: {fileID: 8767789146275577996, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
   hunterPrefab: {fileID: 8189574656381480725, guid: 05ebb60d5845fa84eae1be37e01a44af, type: 3}
-  scenario: 0
+  scenario: 1
   distance: 12
   enemyCount: 3
   spacing: 2.5
@@ -6579,6 +6581,7 @@ MonoBehaviour:
   deathScreen: {fileID: 205840681}
   deathHint: {fileID: 42954411}
   spawnDefaultFuelPickups: 0
+  startsWithoutDash: 0
 --- !u!143 &1928668633
 CharacterController:
   m_ObjectHideFlags: 0

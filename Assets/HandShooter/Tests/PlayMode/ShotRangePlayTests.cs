@@ -58,16 +58,9 @@ namespace HandShooter.Tests
             return target;
         }
 
-        [TestCase(3f, 0f, true, 1, 0.055f)]
-        [TestCase(3.75f, 3f, false, 4, 0.11f)]
-        [TestCase(4.75f, 0f, false, 1, 0.055f)]
-        [TestCase(4.75f, 0f, false, 4, 0.11f)]
-        public void PlayerBeamMarksItsActualEndpoint(float targetDistance, float wallDistance, bool damagesTarget,
-            int fingers, float expectedDiameter)
+        private HandWeapon BeamWeapon(Vector3 muzzleOffset)
         {
             Time.timeScale = 1f;
-            shooter.range = 5f;
-            shooter.initialActiveFingers = fingers;
             var playerObject = new GameObject("Beam test player") { layer = 2 };
             playerObject.transform.position = Origin;
             var player = playerObject.AddComponent<PrototypePlayer>();
@@ -77,7 +70,7 @@ namespace HandShooter.Tests
 
             var weaponObject = new GameObject("Beam test weapon");
             weaponObject.SetActive(false);
-            weaponObject.transform.position = Origin + new Vector3(0.5f, 0f, -1f);
+            weaponObject.transform.position = Origin + muzzleOffset;
             var weapon = weaponObject.AddComponent<HandWeapon>();
             weapon.enabled = false;
             weapon.settings = shooter;
@@ -85,6 +78,19 @@ namespace HandShooter.Tests
             weapon.viewCamera = camera;
             weapon.muzzle = weaponObject.transform;
             weaponObject.SetActive(true);
+            return weapon;
+        }
+
+        [TestCase(3f, 0f, true, 1, 0.055f)]
+        [TestCase(3.75f, 3f, false, 4, 0.11f)]
+        [TestCase(4.75f, 0f, false, 1, 0.055f)]
+        [TestCase(4.75f, 0f, false, 4, 0.11f)]
+        public void PlayerBeamMarksItsActualEndpoint(float targetDistance, float wallDistance, bool damagesTarget,
+            int fingers, float expectedDiameter)
+        {
+            shooter.range = 5f;
+            shooter.initialActiveFingers = fingers;
+            var weapon = BeamWeapon(new Vector3(0.5f, 0f, -1f));
 
             var target = Target(Origin + Vector3.forward * targetDistance);
             if (wallDistance > 0f)
@@ -102,12 +108,72 @@ namespace HandShooter.Tests
             Assert.That(endpoint.GetComponent<Collider>(), Is.Null);
             Assert.That(endpoint.GetComponent<MeshFilter>().sharedMesh, Is.Not.Null);
             Assert.That(endpoint.localScale.x, Is.EqualTo(expectedDiameter).Within(0.001f));
-            if (damagesTarget || wallDistance > 0f)
+            if (wallDistance > 0f)
                 Assert.That(end.z, Is.EqualTo(2.5f).Within(0.001f));
             else
                 Assert.That(Vector3.Distance(weapon.muzzle.position, end), Is.EqualTo(shooter.range).Within(0.001f));
             float damage = damagesTarget ? weapon.Stats.Damage : 0f;
             Assert.That(target.Health, Is.EqualTo(shooter.targetHealth - damage));
+        }
+
+        [TestCase(0f, 10f, true)]
+        [TestCase(6f, 10f, false)]
+        [TestCase(0f, 5f, false)]
+        public void BeamPiercesTargetsOnceAndStopsAtSceneryOrRange(float wallDistance, float range, bool hitsThird)
+        {
+            shooter.range = range;
+            var weapon = BeamWeapon(Vector3.zero);
+            var first = Target(Origin + Vector3.forward * 2f);
+            first.gameObject.AddComponent<SphereCollider>();
+            var child = new GameObject("Additional hitbox", typeof(BoxCollider));
+            child.transform.SetParent(first.transform, false);
+            var second = Target(Origin + Vector3.forward * 4f);
+            var third = Target(Origin + Vector3.forward * 8f);
+            var beyondRange = Target(Origin + Vector3.forward * 12f);
+            var trigger = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            trigger.transform.position = Origin + Vector3.forward * 3f;
+            trigger.GetComponent<Collider>().isTrigger = true;
+            if (wallDistance > 0f)
+            {
+                var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                wall.transform.position = Origin + Vector3.forward * wallDistance;
+            }
+            Physics.SyncTransforms();
+
+            Assert.That(weapon.TryFire(), Is.True);
+            Assert.That(first.Health, Is.EqualTo(shooter.targetHealth - weapon.Stats.Damage));
+            Assert.That(second.Health, Is.EqualTo(shooter.targetHealth - weapon.Stats.Damage));
+            Assert.That(third.Health, Is.EqualTo(shooter.targetHealth - (hitsThird ? weapon.Stats.Damage : 0f)));
+            Assert.That(beyondRange.Health, Is.EqualTo(shooter.targetHealth));
+            var beam = arena.GetRootGameObjects().Single(root => root.name == "Shot beam").GetComponent<LineRenderer>();
+            Assert.That(beam.GetPosition(1).z,
+                Is.EqualTo(wallDistance > 0f ? wallDistance - 0.5f : range).Within(0.001f));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TargetBetweenCameraAndMuzzleDoesNotHideAWallOrBlockTheBeam(bool withWall)
+        {
+            shooter.range = 10f;
+            var weapon = BeamWeapon(new Vector3(1f, 0f, 3f));
+            var near = Target(Origin + new Vector3(0.6f, 0f, 1.7f));
+            var far = Target(Origin + Vector3.forward * 6f);
+            if (withWall)
+            {
+                var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                wall.transform.position = Origin + new Vector3(0.7f, 0f, 2.6f);
+            }
+            Physics.SyncTransforms();
+
+            Assert.That(weapon.TryFire(), Is.True);
+            Assert.That(near.Health, Is.EqualTo(shooter.targetHealth - (withWall ? weapon.Stats.Damage : 0f)));
+            Assert.That(far.Health, Is.EqualTo(shooter.targetHealth - (withWall ? 0f : weapon.Stats.Damage)));
+            var beam = arena.GetRootGameObjects().Single(root => root.name == "Shot beam").GetComponent<LineRenderer>();
+            if (withWall)
+                Assert.That(beam.GetPosition(1).z, Is.EqualTo(2.1f).Within(0.001f));
+            else
+                Assert.That(Vector3.Distance(beam.GetPosition(0), beam.GetPosition(1)),
+                    Is.EqualTo(shooter.range).Within(0.001f));
         }
 
         [UnityTest] public IEnumerator SlowPlayerShotWarnsAndDealsSplashAtItsRange()

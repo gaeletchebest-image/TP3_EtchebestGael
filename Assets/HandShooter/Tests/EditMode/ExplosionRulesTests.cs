@@ -8,10 +8,10 @@ namespace HandShooter.Tests
         private ShooterSettings settings;
         [SetUp] public void SetUp() { settings = ScriptableObject.CreateInstance<ShooterSettings>(); }
         [TearDown] public void TearDown() { Object.DestroyImmediate(settings); }
-        [TestCase(1, 1f, 1.25f)]
-        [TestCase(2, 2f, 1.767767f)]
-        [TestCase(3, 4f, 2.5f)]
-        [TestCase(4, 8f, 3.535534f)]
+        [TestCase(1, 0.5f, 0.8838835f)]
+        [TestCase(2, 1f, 1.25f)]
+        [TestCase(3, 2f, 1.767767f)]
+        [TestCase(4, 4f, 2.5f)]
         public void ConcentrationIncreasesExplosionDamageAndRadius(int fingers, float damage, float radius)
         {
             var shot = settings.Evaluate(new HandConfiguration(fingers, false));

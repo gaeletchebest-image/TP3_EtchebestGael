@@ -23,14 +23,14 @@ namespace HandShooter.Tests
         }
         [Test] public void ProjectileIncludesTravelSplashAndDiscountButDoesNotMultiplySingleTargetDpsByGroup()
         {
-            var estimate = Estimate(4, false, 24f, 6f, 3);
-            Assert.That(estimate.DirectDamage, Is.EqualTo(16f));
-            Assert.That(estimate.SplashDamage, Is.EqualTo(8f));
+            var estimate = Estimate(4, false, 12f, 6f, 3);
+            Assert.That(estimate.DirectDamage, Is.EqualTo(8f));
+            Assert.That(estimate.SplashDamage, Is.EqualTo(4f));
             Assert.That(estimate.ShotsToKill, Is.EqualTo(1));
             Assert.That(estimate.FuelPerShot, Is.EqualTo(4f));
-            Assert.That(estimate.TimeToKill, Is.EqualTo(2f).Within(0.001f));
-            Assert.That(estimate.DamagePerSecond, Is.EqualTo(12f));
-            Assert.That(estimate.GroupDamage, Is.EqualTo(40f));
+            Assert.That(estimate.TimeToKill, Is.EqualTo(Mathf.Sqrt(2f)).Within(0.001f));
+            Assert.That(estimate.DamagePerSecond, Is.EqualTo(6f));
+            Assert.That(estimate.GroupDamage, Is.EqualTo(20f));
         }
         [Test] public void ReloadWaitOverlapsShotCooldownAndReservesLimitFeasibility()
         {
@@ -44,7 +44,7 @@ namespace HandShooter.Tests
         [Test] public void SlowReloadDoesNotDoubleCountCooldown()
         {
             fuel.tankCapacity = 16f; fuel.reloadDuration = 0.5f;
-            var estimate = Estimate(4, false, 120f);
+            var estimate = Estimate(4, false, 60f);
             Assert.That(estimate.Reloads, Is.EqualTo(1));
             Assert.That(estimate.TimeToKill, Is.EqualTo(8f).Within(0.001f));
         }
@@ -74,7 +74,7 @@ namespace HandShooter.Tests
             settings.explosionMaxRadius = 0f;
             var estimate = Estimate(4, false, 24f);
             Assert.That(estimate.SplashDamage, Is.Zero);
-            Assert.That(estimate.ShotsToKill, Is.EqualTo(2));
+            Assert.That(estimate.ShotsToKill, Is.EqualTo(3));
         }
         [Test] public void ExplosionAccuracyCountsShotsRatherThanVictimsAndFinishIsIdempotent()
         {

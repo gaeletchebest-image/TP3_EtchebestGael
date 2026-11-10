@@ -172,6 +172,10 @@ MonoBehaviour:
   sniperSettings: {fileID: 0}
   hunterSettings: {fileID: 0}
   label: {fileID: 304497275}
+  showVitals: 0
+  practiceHealthOverride: 0
+  practiceDefensePoints: 0
+  practiceDefenseBarCapacity: 1
 --- !u!23 &17299651
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -8618,6 +8622,10 @@ MonoBehaviour:
   sniperSettings: {fileID: 0}
   hunterSettings: {fileID: 0}
   label: {fileID: 439656649}
+  showVitals: 0
+  practiceHealthOverride: 0
+  practiceDefensePoints: 0
+  practiceDefenseBarCapacity: 1
 --- !u!23 &1300085623
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -9762,6 +9770,7 @@ MonoBehaviour:
   - {fileID: 2118103281}
   thumbVisual: {fileID: 2075358014}
   startsUnequipped: 0
+  startsWithoutThumb: 0
   tankCapacity: 50
   fuelPerDamage: 1
   startingSpareTanks: 0
@@ -10571,6 +10580,10 @@ MonoBehaviour:
   sniperSettings: {fileID: 0}
   hunterSettings: {fileID: 0}
   label: {fileID: 674061454}
+  showVitals: 0
+  practiceHealthOverride: 0
+  practiceDefensePoints: 0
+  practiceDefenseBarCapacity: 1
 --- !u!23 &1611372261
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -12883,6 +12896,10 @@ MonoBehaviour:
   sniperSettings: {fileID: 0}
   hunterSettings: {fileID: 0}
   label: {fileID: 1516934004}
+  showVitals: 0
+  practiceHealthOverride: 0
+  practiceDefensePoints: 0
+  practiceDefenseBarCapacity: 1
 --- !u!23 &1947019968
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -13273,6 +13290,10 @@ MonoBehaviour:
   sniperSettings: {fileID: 0}
   hunterSettings: {fileID: 0}
   label: {fileID: 588201021}
+  showVitals: 0
+  practiceHealthOverride: 0
+  practiceDefensePoints: 0
+  practiceDefenseBarCapacity: 1
 --- !u!23 &2014275100
 MeshRenderer:
   m_ObjectHideFlags: 0

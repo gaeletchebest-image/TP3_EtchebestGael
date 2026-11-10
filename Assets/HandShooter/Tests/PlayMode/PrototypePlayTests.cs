@@ -46,7 +46,7 @@ namespace HandShooter.Tests
             float flightTime = Vector3.Distance(weapon.muzzle.position, target.transform.position) /
                 weapon.settings.EvaluateProjectileSpeed(weapon.Stats.Damage);
             yield return new WaitForSeconds(flightTime + 0.1f);
-            Assert.That(target.Health, Is.EqualTo(before - 3));
+            Assert.That(target.Health, Is.EqualTo(before - 1.5f));
         }
         [UnityTest] public IEnumerator MenuPausesWorldBlocksShootingAndButtonsChangeConfiguration()
         {
@@ -56,6 +56,12 @@ namespace HandShooter.Tests
             Assert.That(menu.MenuRoot.activeSelf, Is.True);
             Assert.That(Time.timeScale, Is.Zero);
             Assert.That(weapon.TryFire(), Is.False);
+            var rules = menu.MenuRoot.transform.Find("Hand Menu Panel/Rules Text").GetComponent<Text>();
+            Assert.That(rules.text, Does.Contain($"daño ×{1.5f:0.##}"));
+            weapon.Hand.ThumbActive = false;
+            yield return null;
+            var thumb = menu.MenuRoot.transform.Find("Hand Menu Panel/Thumb Button/Thumb Label").GetComponent<Text>();
+            Assert.That(thumb.text, Does.Contain($"daño ×{1.5f:0.##}"));
             var middle = menu.MenuRoot.transform.Find("Hand Menu Panel/Finger Button 2").GetComponent<Button>();
             Assert.That(middle.interactable, Is.True);
             middle.onClick.Invoke();
