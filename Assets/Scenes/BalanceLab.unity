@@ -1490,6 +1490,7 @@ GameObject:
   - component: {fileID: 346174847}
   - component: {fileID: 346174849}
   - component: {fileID: 346174848}
+  - component: {fileID: 346174850}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1497,6 +1498,19 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &346174850
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 346174846}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a811c2cf10a53c2458b9d17db85aa677, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: HandShooter.CRT::HandShooter.CRT.CRTCameraEffect
+  profile: {fileID: 11400000, guid: f4a3fe809d2c58e4ba9e3b98ad7187e0, type: 2}
 --- !u!4 &346174847
 Transform:
   m_ObjectHideFlags: 0

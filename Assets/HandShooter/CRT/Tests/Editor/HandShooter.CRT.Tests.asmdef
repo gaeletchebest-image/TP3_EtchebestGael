@@ -1,0 +1,6 @@
+{
+  "name": "HandShooter.CRT.Tests",
+  "references": ["HandShooter.CRT", "Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Universal.Runtime"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
