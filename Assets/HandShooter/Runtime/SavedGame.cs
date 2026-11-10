@@ -18,6 +18,7 @@ namespace HandShooter
         public Player player;
         public List<Enemy> enemies;
         public List<Door> doors;
+        public List<DummyChallenge> dummyChallenges;
         public List<Lift> lifts;
         public List<Arena> arenas;
         public List<string> consumedPickups;
@@ -28,6 +29,7 @@ namespace HandShooter
             public Vector3 position, dashDirection;
             public Quaternion rotation;
             public float pitch, verticalVelocity, dashRemaining, dashCooldown;
+            public bool dashLocked;
             public Weapon weapon;
         }
 
@@ -36,7 +38,7 @@ namespace HandShooter
         {
             public float fuel, cooldown, reloadElapsed;
             public int spareTanks, mask;
-            public bool thumb, reloading;
+            public bool thumb, reloading, unequipped, thumbUnlocked;
         }
 
         [Serializable]
@@ -86,6 +88,18 @@ namespace HandShooter
             public string id;
             public bool open;
             public float openness, startOpenness, progress;
+            public bool hasWeaponDelay;
+            public float weaponDelayRemaining;
+        }
+
+        [Serializable]
+        internal sealed class DummyChallenge
+        {
+            public string id;
+            public Enemy target;
+            public int shots;
+            public bool completed;
+            public float respawnRemaining;
         }
 
         [Serializable]

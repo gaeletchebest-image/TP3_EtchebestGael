@@ -14,10 +14,18 @@ namespace HandShooter
         [SerializeField, Min(0.01f)] private float travelTime = 0.45f;
         [SerializeField] private bool startOpen;
 
+        [Header("Optional clearance before sliding")]
+        [SerializeField] private Vector3 clearanceOffset;
+        [SerializeField, Min(0f)] private float clearanceTravelTime;
+        [SerializeField, Min(0f)] private float clearanceHoldTime;
+
         private bool openRequested;
         private float openness;
         private float startOpenness;
         private float progress = 1f;
+        private bool HasClearance => clearanceTravelTime > 0f;
+        private float ClearanceTime => HasClearance ? clearanceTravelTime + clearanceHoldTime : 0f;
+        private Vector3 ClearancePosition => closedPosition + clearanceOffset;
 
         internal float VisiblePanelFraction =>
             panel ? Mathf.Clamp01(1f - (panel.transform.localPosition.y - closedPosition.y) / size.y) : 1f;
@@ -51,7 +59,24 @@ namespace HandShooter
             progress = 0f;
         }
 
-        private Vector3 PanelPosition => transform.TransformPoint(Vector3.Lerp(closedPosition, openPosition, openness));
+        private Vector3 PanelPosition
+        {
+            get
+            {
+                if (!HasClearance)
+                    return transform.TransformPoint(Vector3.Lerp(closedPosition, openPosition, openness));
+
+                float elapsed = openness * (ClearanceTime + travelTime);
+                if (elapsed < clearanceTravelTime)
+                {
+                    float release = Mathf.SmoothStep(0f, 1f, elapsed / clearanceTravelTime);
+                    return transform.TransformPoint(Vector3.Lerp(closedPosition, ClearancePosition, release));
+                }
+
+                float slide = Mathf.SmoothStep(0f, 1f, (elapsed - ClearanceTime) / travelTime);
+                return transform.TransformPoint(Vector3.Lerp(ClearancePosition, openPosition, slide));
+            }
+        }
 
         internal SavedGame.Door CaptureState(string id) => new SavedGame.Door
         {
@@ -74,8 +99,14 @@ namespace HandShooter
         private void FixedUpdate()
         {
             if (progress >= 1f) return;
-            progress = Mathf.Clamp01(progress + Time.fixedDeltaTime / travelTime);
-            openness = Mathf.SmoothStep(startOpenness, openRequested ? 1f : 0f, progress);
+            float target = openRequested ? 1f : 0f;
+            float duration = HasClearance
+                ? (ClearanceTime + travelTime) * Mathf.Abs(target - startOpenness)
+                : travelTime;
+            progress = Mathf.Clamp01(progress + Time.fixedDeltaTime / Mathf.Max(0.01f, duration));
+            openness = HasClearance
+                ? Mathf.Lerp(startOpenness, target, progress)
+                : Mathf.SmoothStep(startOpenness, target, progress);
             panel.MovePosition(PanelPosition);
         }
 
@@ -94,7 +125,13 @@ namespace HandShooter
             Gizmos.DrawWireCube(closedPosition, size);
             Gizmos.color = Color.green;
             Gizmos.DrawWireCube(openPosition, size);
-            Gizmos.DrawLine(closedPosition, openPosition);
+            if (HasClearance)
+            {
+                Gizmos.DrawWireCube(ClearancePosition, size);
+                Gizmos.DrawLine(closedPosition, ClearancePosition);
+                Gizmos.DrawLine(ClearancePosition, openPosition);
+            }
+            else Gizmos.DrawLine(closedPosition, openPosition);
             Gizmos.matrix = previousMatrix;
             Gizmos.color = previousColor;
         }

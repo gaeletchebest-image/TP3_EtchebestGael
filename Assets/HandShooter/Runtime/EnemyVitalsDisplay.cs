@@ -50,14 +50,13 @@ namespace HandShooter
 
         public void Place(Vector3 position, Camera camera, TextMesh status)
         {
-            SetVisible(camera);
-            if (!camera) return;
             root.transform.SetPositionAndRotation(position, camera.transform.rotation);
             if (statusText && status)
             {
                 statusText.text = status.text;
                 statusText.color = status.color;
             }
+            SetVisible(true);
         }
 
         public void SetVisible(bool visible)

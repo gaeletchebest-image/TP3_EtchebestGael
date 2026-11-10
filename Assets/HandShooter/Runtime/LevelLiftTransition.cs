@@ -8,8 +8,11 @@ namespace HandShooter
     [DefaultExecutionOrder(10)]
     public sealed class LevelLiftTransition : MonoBehaviour
     {
+        [Tooltip("Opcional para niveles que comienzan a pie o en una cápsula.")]
         [SerializeField] private CargoLift arrival;
         [SerializeField] private CargoLift departure;
+        [Tooltip("Ruta de la escena de destino. Si se deja vacía, vuelve a cargar este nivel.")]
+        [SerializeField] private string departureScenePath;
         [Tooltip("Si se deja vacío, usa el jugador de esta escena.")]
         [SerializeField] private PrototypePlayer player;
         [Tooltip("Tiempo en negro antes de volver a cargar el nivel.")]
@@ -25,6 +28,7 @@ namespace HandShooter
         private long displayedCentiseconds = -1;
         private float? reloadAt;
         private bool loading;
+        private int departureSceneIndex;
         internal float SecondsRemaining => (float)secondsRemaining;
 
         private void Awake()
@@ -46,9 +50,12 @@ namespace HandShooter
                 }
             }
 
-            if (!arrival || !departure || !player || scene.buildIndex < 0)
+            departureSceneIndex = string.IsNullOrEmpty(departureScenePath)
+                ? scene.buildIndex
+                : SceneUtility.GetBuildIndexByScenePath(departureScenePath);
+            if (!departure || !player || departureSceneIndex < 0)
             {
-                Debug.LogError("LevelLiftTransition needs both lifts and the player in a scene included in the build.", this);
+                Debug.LogError("LevelLiftTransition needs a departure lift, a player and a destination included in the build.", this);
                 enabled = false;
                 return;
             }
@@ -66,7 +73,7 @@ namespace HandShooter
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = rect.offsetMax = Vector2.zero;
-            shade.color = Color.black;
+            shade.color = arrival ? Color.black : Color.clear;
             shade.raycastTarget = false;
         }
 
@@ -77,7 +84,8 @@ namespace HandShooter
             // Derive opacity from the lift poses so it also follows restored saves.
             float departureFade = departure.DescentProgress;
             UpdateCountdown(departureFade);
-            float opacity = Mathf.Max(1f - arrival.DescentProgress, departureFade);
+            float arrivalFade = arrival ? 1f - arrival.DescentProgress : 0f;
+            float opacity = Mathf.Max(arrivalFade, departureFade);
             shade.color = new Color(0f, 0f, 0f, opacity);
             shade.enabled = opacity > 0f && !player.IsDead && (!player.IsMenuOpen || player.IsPauseMenuOpen);
 
@@ -91,13 +99,13 @@ namespace HandShooter
             if (Time.time < reloadAt.Value || Time.deltaTime <= 0f) return;
 
             loading = true;
-            SceneManager.LoadSceneAsync(gameObject.scene.buildIndex, LoadSceneMode.Single);
+            SceneManager.LoadSceneAsync(departureSceneIndex, LoadSceneMode.Single);
         }
 
         private void UpdateCountdown(float departureFade)
         {
             if (levelDurationSeconds <= 0) return;
-            bool running = arrival.IsGateOpen && departureFade == 0f &&
+            bool running = (!arrival || arrival.IsGateOpen) && departureFade == 0f &&
                 !player.IsDead && !player.IsMenuOpen && !departure.IsPlayerAboard();
             if (countdown) countdown.enabled = running;
             if (!running) return;

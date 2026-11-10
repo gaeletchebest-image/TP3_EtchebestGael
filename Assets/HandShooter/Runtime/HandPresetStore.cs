@@ -10,7 +10,7 @@ namespace HandShooter
         public HandPreset(int activeMask, bool thumbActive)
         { ActiveMask = activeMask; ThumbActive = thumbActive; }
         public bool Matches(HandConfiguration hand) => IsSaved && hand != null &&
-            hand.ActiveMask == ActiveMask && hand.ThumbActive == ThumbActive;
+            hand.ActiveMask == ActiveMask && (!hand.ThumbUnlocked || hand.ThumbActive == ThumbActive);
     }
 
     public sealed class HandPresetStore

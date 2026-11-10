@@ -2034,6 +2034,40 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &312456869
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 312456870}
+  m_Layer: 0
+  m_Name: Dummy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &312456870
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 312456869}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1128014058}
+  - {fileID: 1005424228}
+  - {fileID: 2014275098}
+  m_Father: {fileID: 1649684158}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &313967566
 GameObject:
   m_ObjectHideFlags: 0
@@ -7048,12 +7082,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1005424227}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 6, y: 0.8, z: 20}
   m_LocalScale: {x: 0.12, y: 1.6, z: 0.12}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1649684158}
+  m_Father: {fileID: 312456870}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1005424229
 MeshRenderer:
@@ -7883,12 +7917,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1128014057}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 6, y: 0.15, z: 20}
   m_LocalScale: {x: 2, y: 0.3, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1649684158}
+  m_Father: {fileID: 312456870}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1128014059
 MeshRenderer:
@@ -9727,6 +9761,7 @@ MonoBehaviour:
   - {fileID: 527352408}
   - {fileID: 2118103281}
   thumbVisual: {fileID: 2075358014}
+  startsUnequipped: 0
   tankCapacity: 50
   fuelPerDamage: 1
   startingSpareTanks: 0
@@ -10896,9 +10931,7 @@ Transform:
   - {fileID: 1300085621}
   - {fileID: 439656648}
   - {fileID: 419963474}
-  - {fileID: 1128014058}
-  - {fileID: 1005424228}
-  - {fileID: 2014275098}
+  - {fileID: 312456870}
   - {fileID: 588201020}
   - {fileID: 761964648}
   - {fileID: 17299649}
@@ -12650,6 +12683,7 @@ MonoBehaviour:
   deathScreen: {fileID: 205840681}
   deathHint: {fileID: 42954411}
   spawnDefaultFuelPickups: 1
+  startsWithoutDash: 0
 --- !u!143 &1928668633
 CharacterController:
   m_ObjectHideFlags: 0
@@ -13214,12 +13248,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2014275097}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 6, y: 1.65, z: 20}
   m_LocalScale: {x: 1.25, y: 1.6, z: 0.35}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1649684158}
+  m_Father: {fileID: 312456870}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2014275099
 MonoBehaviour:

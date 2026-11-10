@@ -11,13 +11,23 @@ namespace HandShooter
         public SniperSettings sniperSettings;
         public HunterSettings hunterSettings;
         public event System.Action<float> Damaged;
+        internal event System.Action Respawned;
         internal float MaximumHealth => hunterSettings ? hunterSettings.initialHealth : sniperSettings ? sniperSettings.initialHealth : kamikazeSettings ? kamikazeSettings.initialHealth :
-            turretSettings ? turretSettings.initialHealth : settings.targetHealth;
+            turretSettings ? turretSettings.initialHealth : PracticeMaximumHealth;
+        private float PracticeMaximumHealth => practiceHealthOverride > 0f ? practiceHealthOverride : settings.targetHealth;
         private int InitialDefensePoints => hunterSettings ? hunterSettings.initialDefensePoints : sniperSettings ? sniperSettings.initialDefensePoints :
-            kamikazeSettings ? kamikazeSettings.initialDefensePoints : turretSettings ? turretSettings.initialDefensePoints : 0;
+            kamikazeSettings ? kamikazeSettings.initialDefensePoints : turretSettings ? turretSettings.initialDefensePoints : practiceDefensePoints;
         private int InitialDefenseCapacity => hunterSettings ? hunterSettings.defenseBarCapacity : sniperSettings ? sniperSettings.defenseBarCapacity :
-            kamikazeSettings ? kamikazeSettings.defenseBarCapacity : turretSettings ? turretSettings.defenseBarCapacity : 1;
+            kamikazeSettings ? kamikazeSettings.defenseBarCapacity : turretSettings ? turretSettings.defenseBarCapacity : practiceDefenseBarCapacity;
         public TextMesh label;
+        [SerializeField] private bool showVitals;
+        [Header("Blanco de práctica")]
+        [SerializeField, Min(0f), Tooltip("Vida máxima de este blanco. Con 0 usa la vida de Shooter Settings.")]
+        private float practiceHealthOverride;
+        [SerializeField, Min(0), Tooltip("Puntos de defensa iniciales. Con 0 el blanco no tiene defensa.")]
+        private int practiceDefensePoints;
+        [SerializeField, Min(1), Tooltip("Impactos necesarios para romper cada punto de defensa.")]
+        private int practiceDefenseBarCapacity = 1;
         public float Health { get; private set; }
         internal Vector3 RangeCenter => new Vector3(transform.position.x, body.bounds.min.y + 0.07f, transform.position.z);
         public int DefensePoints => defense.Points;
@@ -35,6 +45,8 @@ namespace HandShooter
         private EnemyVitalsDisplay vitals;
         private TextMesh statusLabel;
         internal bool IsEnemy => turretSettings || kamikazeSettings || sniperSettings || hunterSettings;
+        internal float RespawnRemaining => respawnAt < 0f ? -1f : Mathf.Max(0f, respawnAt - Time.time);
+        internal void SetRespawnDelay(float seconds) => respawnAt = seconds < 0f ? -1f : Time.time + seconds;
 
         private void Awake()
         {
@@ -42,7 +54,7 @@ namespace HandShooter
             hitCollider = GetComponent<Collider>();
             originalColor = body.sharedMaterial.GetColor("_BaseColor");
             properties = new MaterialPropertyBlock();
-            if (IsEnemy)
+            if (IsEnemy || showVitals || InitialDefensePoints > 0)
             {
                 if (TryGetComponent<HunterEnemy>(out var hunter)) statusLabel = hunter.statusLabel;
                 if (TryGetComponent<SniperEnemy>(out var sniper)) statusLabel = sniper.statusLabel;
@@ -85,7 +97,7 @@ namespace HandShooter
 
         internal void RestoreState(SavedGame.Enemy state)
         {
-            Health = state.health;
+            Health = IsEnemy ? state.health : Mathf.Clamp(state.health, 0f, MaximumHealth);
             LastDamage = state.lastDamage;
             DestroyedCount = state.destroyedCount;
             defense = new EnemyDefense(state.defensePoints, state.defenseCapacity, state.defenseBar);
@@ -110,17 +122,31 @@ namespace HandShooter
             if (TryGetComponent<KamikazeEnemy>(out var kamikaze)) kamikaze.HasAcquiredTarget = state.acquiredTarget;
             if (state.hunter != null && TryGetComponent<HunterEnemy>(out var hunter)) hunter.RestoreState(state.hunter);
             if (state.sniper != null && TryGetComponent<SniperEnemy>(out var sniper)) sniper.RestoreState(state.sniper);
+            if (!IsEnemy) body.enabled = hitCollider.enabled = Health > 0f;
             RefreshLabel();
         }
 
         private void LateUpdate()
         {
-            if (vitals == null || Health <= 0f) return;
+            if (vitals == null) return;
+            Camera camera = Camera.main;
+            if (Health <= 0f || !camera || !HasLineOfSight(camera))
+            {
+                vitals.SetVisible(false);
+                return;
+            }
+
             Bounds bounds = body.bounds;
             Vector3 anchor = new Vector3(bounds.center.x, bounds.max.y + 0.25f, bounds.center.z);
             if (label) anchor.y = Mathf.Max(anchor.y, label.transform.position.y);
-            vitals.Place(anchor, Camera.main, statusLabel);
+            vitals.Place(anchor, camera, statusLabel);
         }
+
+        // Test the body so the floating indicators cannot give away a target behind cover.
+        internal bool HasLineOfSight(Camera camera) =>
+            !Physics.Linecast(camera.transform.position, hitCollider.bounds.center, out RaycastHit hit,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) ||
+            hit.collider.GetComponentInParent<DamageTarget>() == this;
 
         public bool TakeDamage(float amount) => ApplyDamage(amount, false);
         public bool TakePlayerShotDamage(float amount) => ApplyDamage(amount, true);
@@ -137,14 +163,14 @@ namespace HandShooter
             if (Health <= 0)
             {
                 DestroyedCount++;
+                vitals?.SetVisible(false);
                 if (IsEnemy)
                 {
-                    vitals?.SetVisible(false);
                     body.enabled = hitCollider.enabled = false;
                     Destroy(gameObject);
                     return true;
                 }
-                respawnAt = Time.time + settings.targetRespawnDelay;
+                SetRespawnDelay(settings.targetRespawnDelay);
                 body.enabled = hitCollider.enabled = false;
             }
             RefreshLabel();
@@ -159,6 +185,7 @@ namespace HandShooter
             if (body) body.enabled = true;
             if (hitCollider) hitCollider.enabled = true;
             RefreshLabel();
+            Respawned?.Invoke();
         }
         private void Update()
         {

@@ -264,7 +264,7 @@ namespace HandShooter.Editor
         private static void ConfigureTurretVisuals(TurretEnemy turret)
         {
             var body = turret.gameObject;
-            turret.projectileMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/HandShooter/Materials/Projectile.mat");
+            turret.projectileMaterial = Material("TurretProjectile", turret.settings ? turret.settings.projectileColor : Color.red, true);
             EditorUtility.SetDirty(turret);
             body.transform.localScale = new Vector3(1.25f, 1.6f, 0.35f);
             var red = Material("Turret", new Color(0.85f, 0.08f, 0.1f));

@@ -18,6 +18,7 @@ namespace HandShooter
         private readonly LevelLiftTransition countdown;
         private readonly Dictionary<string, DamageTarget> enemies = new Dictionary<string, DamageTarget>();
         private readonly Dictionary<string, SlidingDoor> doors = new Dictionary<string, SlidingDoor>();
+        private readonly Dictionary<string, DummyDoorChallenge> dummyChallenges = new Dictionary<string, DummyDoorChallenge>();
         private readonly Dictionary<string, CargoLift> lifts = new Dictionary<string, CargoLift>();
         private readonly Dictionary<string, ArenaEncounter> arenas = new Dictionary<string, ArenaEncounter>();
         private readonly Dictionary<string, FuelTankPickup> pickups = new Dictionary<string, FuelTankPickup>();
@@ -30,6 +31,7 @@ namespace HandShooter
                 .FirstOrDefault(transition => transition && transition.SecondsRemaining > 0f);
             Collect(roots, enemies, target => target.IsEnemy);
             Collect(roots, doors);
+            Collect(roots, dummyChallenges);
             Collect(roots, lifts);
             Collect(roots, arenas);
             Collect(roots, pickups);
@@ -54,6 +56,7 @@ namespace HandShooter
                 player = player.CaptureState(),
                 enemies = new List<SavedGame.Enemy>(),
                 doors = new List<SavedGame.Door>(),
+                dummyChallenges = new List<SavedGame.DummyChallenge>(),
                 lifts = new List<SavedGame.Lift>(),
                 arenas = new List<SavedGame.Arena>(),
                 consumedPickups = new List<string>()
@@ -64,7 +67,21 @@ namespace HandShooter
                 if (state != null) snapshot.enemies.Add(state);
             }
             foreach (var pair in doors)
-                if (pair.Value) snapshot.doors.Add(pair.Value.CaptureState(pair.Key));
+            {
+                if (!pair.Value) continue;
+                var state = pair.Value.CaptureState(pair.Key);
+                if (pair.Value.TryGetComponent<WeaponUnlockDoor>(out var unlock))
+                {
+                    state.hasWeaponDelay = true;
+                    state.weaponDelayRemaining = unlock.RemainingDelay;
+                }
+                snapshot.doors.Add(state);
+            }
+            foreach (var pair in dummyChallenges)
+            {
+                var state = pair.Value ? pair.Value.CaptureState(pair.Key) : null;
+                if (state != null) snapshot.dummyChallenges.Add(state);
+            }
             foreach (var pair in lifts)
                 if (pair.Value) snapshot.lifts.Add(pair.Value.CaptureState(pair.Key));
             foreach (var pair in arenas)
@@ -88,7 +105,12 @@ namespace HandShooter
             foreach (var state in snapshot.arenas)
                 if (arenas.TryGetValue(state.id, out var arena) && arena) arena.State = state.state;
             foreach (var state in snapshot.doors)
-                if (doors.TryGetValue(state.id, out var door) && door) door.RestoreState(state);
+            {
+                if (!doors.TryGetValue(state.id, out var door) || !door) continue;
+                door.RestoreState(state);
+                if (state.hasWeaponDelay && door.TryGetComponent<WeaponUnlockDoor>(out var unlock))
+                    unlock.RemainingDelay = state.weaponDelayRemaining;
+            }
             foreach (var pair in lifts)
                 if (pair.Value) pair.Value.RestoreState(snapshot.lifts?.Find(state => state.id == pair.Key));
             if (countdown) countdown.RestoreCountdown(snapshot.levelSecondsRemaining);
@@ -103,6 +125,9 @@ namespace HandShooter
                 if (state.defeated) Remove(enemy.gameObject);
                 else enemy.RestoreState(state);
             }
+            if (snapshot.dummyChallenges != null)
+                foreach (var state in snapshot.dummyChallenges)
+                    if (dummyChallenges.TryGetValue(state.id, out var challenge) && challenge) challenge.RestoreState(state);
             Physics.SyncTransforms();
         }
 
@@ -230,6 +255,7 @@ namespace HandShooter
             HandConfiguration.IsValidMask(snapshot.player.weapon.mask) &&
             snapshot.enemies != null && snapshot.enemies.All(entry => !string.IsNullOrEmpty(entry?.id)) &&
             snapshot.doors != null && snapshot.doors.All(entry => !string.IsNullOrEmpty(entry?.id)) &&
+            (snapshot.dummyChallenges == null || snapshot.dummyChallenges.All(entry => !string.IsNullOrEmpty(entry?.id))) &&
             (snapshot.lifts == null || snapshot.lifts.All(entry => !string.IsNullOrEmpty(entry?.id))) &&
             snapshot.arenas != null && snapshot.arenas.All(entry => !string.IsNullOrEmpty(entry?.id)) &&
             snapshot.consumedPickups != null && snapshot.consumedPickups.All(id => !string.IsNullOrEmpty(id));

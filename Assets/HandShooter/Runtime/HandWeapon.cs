@@ -18,6 +18,9 @@ namespace HandShooter
         public Transform muzzle;
         public Transform[] fingerVisuals;
         public Transform thumbVisual;
+        [SerializeField] private bool startsUnequipped;
+        [SerializeField] private bool startsWithoutThumb;
+        public bool IsEquipped => gameObject.activeSelf;
         public HandConfiguration Hand { get; private set; }
         public HandPresetStore Presets { get; private set; }
         public ShotStats Stats => settings.Evaluate(Hand);
@@ -35,7 +38,10 @@ namespace HandShooter
         public float Fuel { get; private set; }
         public int SpareTankCount { get; private set; }
         public bool IsReloading { get; private set; }
-        public float FuelFraction => tankCapacity <= 0f ? 0f : Fuel / tankCapacity;
+        internal bool HasUnlimitedFuel => Hand != null && !Hand.ThumbUnlocked;
+        public float FuelFraction => HasUnlimitedFuel ? 1f : tankCapacity <= 0f ? 0f : Fuel / tankCapacity;
+        private bool CanReload => !HasUnlimitedFuel && !IsReloading && SpareTankCount > 0 && Fuel < tankCapacity;
+        internal float GetFuelCost(ShotStats stats) => HasUnlimitedFuel ? 0f : settings.EvaluateFuelCost(stats, fuelPerDamage);
         public event Action<float> Hit;
         public event Action FuelChanged;
         public event Action<int> PresetSaved;
@@ -55,12 +61,16 @@ namespace HandShooter
         private int excludedHandLayer;
         private void Awake()
         {
-            Hand = new HandConfiguration(settings.initialActiveFingers, settings.initialThumbActive);
+            Hand = new HandConfiguration(settings.initialActiveFingers, settings.initialThumbActive)
+            {
+                ThumbUnlocked = !startsWithoutThumb
+            };
             Presets = new HandPresetStore();
             Fuel = tankCapacity;
             SpareTankCount = startingSpareTanks;
             handRestPosition = transform.localPosition;
             handRestRotation = transform.localRotation;
+            if (startsUnequipped) gameObject.SetActive(false);
         }
         private void Start()
         {
@@ -113,6 +123,18 @@ namespace HandShooter
             if (handCamera) Destroy(handCamera.gameObject);
         }
         public void RequireTriggerRelease() { requireRelease = true; }
+        internal void Equip()
+        {
+            UpdateHandVisuals();
+            RequireTriggerRelease();
+            gameObject.SetActive(true);
+        }
+        internal void AttachThumb()
+        {
+            Hand.ThumbUnlocked = true;
+            Hand.ThumbActive = true;
+            UpdateHandVisuals();
+        }
         public bool SavePreset(int digit)
         {
             if (player.IsDead || !player.IsMenuOpen || player.IsPauseMenuOpen || !Presets.Save(digit, Hand)) return false;
@@ -155,9 +177,9 @@ namespace HandShooter
         }
         public bool TryFire()
         {
-            if (cooldownFraction > 0f || IsReloading || player.IsMenuOpen || Time.timeScale == 0f) return false;
+            if (!IsEquipped || cooldownFraction > 0f || IsReloading || player.IsMenuOpen || Time.timeScale == 0f) return false;
             ShotStats stats = Stats;
-            float fuelCost = settings.EvaluateFuelCost(stats, fuelPerDamage);
+            float fuelCost = GetFuelCost(stats);
             if (Fuel + 0.0001f < fuelCost) return false;
             Fuel = Mathf.Max(0f, Fuel - fuelCost);
             FuelChanged?.Invoke();
@@ -208,7 +230,7 @@ namespace HandShooter
         }
         public bool ReloadFuel()
         {
-            if (IsReloading || SpareTankCount <= 0 || Fuel >= tankCapacity) return false;
+            if (!CanReload) return false;
             SpareTankCount--;
             Fuel = tankCapacity;
             FuelChanged?.Invoke();
@@ -217,7 +239,7 @@ namespace HandShooter
         }
         private bool BeginReloadFuel()
         {
-            if (IsReloading || SpareTankCount <= 0 || Fuel >= tankCapacity) return false;
+            if (!CanReload) return false;
             StartCoroutine(ReloadFuelAnimation(0f));
             return true;
         }
@@ -243,16 +265,20 @@ namespace HandShooter
         internal SavedGame.Weapon CaptureState() => new SavedGame.Weapon
         {
             fuel = Fuel, spareTanks = SpareTankCount, mask = Hand.ActiveMask, thumb = Hand.ThumbActive,
-            cooldown = cooldownFraction, reloading = IsReloading, reloadElapsed = reloadElapsed
+            cooldown = cooldownFraction, reloading = IsReloading, reloadElapsed = reloadElapsed,
+            unequipped = !IsEquipped, thumbUnlocked = Hand.ThumbUnlocked
         };
 
         internal void RestoreState(SavedGame.Weapon state)
         {
+            Hand.ThumbUnlocked = !startsWithoutThumb || state.thumbUnlocked;
             Hand.TryApply(state.mask, state.thumb);
             Fuel = Mathf.Clamp(state.fuel, 0f, tankCapacity);
             SpareTankCount = Mathf.Max(0, state.spareTanks);
             cooldownFraction = Mathf.Clamp01(state.cooldown);
-            if (state.reloading) StartCoroutine(ReloadFuelAnimation(state.reloadElapsed));
+            UpdateHandVisuals();
+            gameObject.SetActive(!state.unequipped);
+            if (IsEquipped && state.reloading && !HasUnlimitedFuel) StartCoroutine(ReloadFuelAnimation(state.reloadElapsed));
             RequireTriggerRelease();
             FuelChanged?.Invoke();
         }
@@ -323,7 +349,11 @@ namespace HandShooter
                     fingerVisuals[i].localPosition = new Vector3(active ? -0.09f + order++ * 0.06f : -0.14f + i * 0.1f, active ? 0.04f : -0.04f, 0.18f - recoil * 0.04f);
                     fingerVisuals[i].localRotation = Quaternion.Euler(active ? 0 : 65, 0, 0);
                 }
-            if (thumbVisual) thumbVisual.localRotation = Quaternion.Euler(Hand.ThumbActive ? -30 : 35, -35, -20);
+            if (thumbVisual)
+            {
+                thumbVisual.localRotation = Quaternion.Euler(Hand.ThumbActive ? -30 : 35, -35, -20);
+                thumbVisual.gameObject.SetActive(Hand.ThumbUnlocked);
+            }
         }
     }
 }

@@ -127,8 +127,34 @@ namespace HandShooter
         private void LateUpdate()
         {
             if (!MenuRoot || weapon.Hand == null) return;
-            MenuRoot.SetActive(player.IsMenuOpen && !player.IsPauseMenuOpen);
-            if (debugPanel.activeSelf != showDebugStats) debugPanel.SetActive(showDebugStats);
+            bool equipped = weapon.IsEquipped;
+            bool unlimitedFuel = weapon.HasUnlimitedFuel;
+            MenuRoot.SetActive(equipped && player.IsMenuOpen && !player.IsPauseMenuOpen);
+            debugPanel.SetActive(equipped && showDebugStats);
+            fuelFillRect.parent.gameObject.SetActive(equipped);
+            fuelLabel.gameObject.SetActive(equipped);
+            tankLabel.gameObject.SetActive(equipped);
+            if (crosshair) crosshair.gameObject.SetActive(equipped);
+            if (hitText) hitText.gameObject.SetActive(equipped);
+            if (dashCooldownFill)
+            {
+                dashCooldownFill.transform.parent.gameObject.SetActive(player.DashUnlocked && !player.IsMenuOpen);
+                float dashFraction = player.DashCooldownFraction;
+                dashCooldownFill.rectTransform.localScale = new Vector3(dashFraction, 1f, 1f);
+                dashCooldownFill.color = dashFraction >= 1f ? mint : orange;
+            }
+            if (controls)
+            {
+                var settings = player.settings;
+                string movement = $"{settings.forwardKey}{settings.leftKey}{settings.backwardKey}{settings.rightKey} MOVER";
+                if (player.DashUnlocked) movement += $"   {settings.dashKey} DASH";
+                string reload = unlimitedFuel ? "" : "   R RECARGAR";
+                controls.text = equipped
+                    ? $"{movement}   CLIC DISPARAR{reload}   CTRL INSPECCIONAR   1–9 / 0 CONFIG.   {settings.menuKey} MANO"
+                    : $"{movement}   ACERCATE A LA MANO PARA EQUIPARLA";
+            }
+            if (!equipped) return;
+
             var stats = weapon.Stats;
             var hand = weapon.Hand;
             var blast = weapon.settings.EvaluateExplosion(stats.Damage);
@@ -138,17 +164,10 @@ namespace HandShooter
             fuelFillRect.anchorMax = new Vector2(fuelFraction, 1f);
             fuelFillRect.offsetMin = fuelFillRect.offsetMax = Vector2.zero;
             fuelFill.color = fuelFraction <= 0.25f ? orange : mint;
-            if (dashCooldownFill)
-            {
-                dashCooldownFill.transform.parent.gameObject.SetActive(!player.IsMenuOpen);
-                float dashFraction = player.DashCooldownFraction;
-                dashCooldownFill.rectTransform.localScale = new Vector3(dashFraction, 1f, 1f);
-                dashCooldownFill.color = dashFraction >= 1f ? mint : orange;
-            }
             fuelLabel.text = "COMBUSTIBLE";
-            tankLabel.text = $"{weapon.Fuel:0}/{weapon.tankCapacity:0}   ·   TANQUES ×{weapon.SpareTankCount}";
-            if (controls) controls.text = $"{player.settings.forwardKey}{player.settings.leftKey}{player.settings.backwardKey}{player.settings.rightKey} MOVER   {player.settings.dashKey} DASH   CLIC DISPARAR   R RECARGAR   CTRL INSPECCIONAR   1–9 / 0 CONFIG.   {player.settings.menuKey} MANO";
-            debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.settings.EvaluateFuelCost(stats, weapon.fuelPerDamage):0.##} COMBUSTIBLE / DISPARO";
+            string fuel = unlimitedFuel ? "INFINITO" : $"{weapon.Fuel:0}/{weapon.tankCapacity:0}";
+            tankLabel.text = $"{fuel}   ·   TANQUES ×{weapon.SpareTankCount}";
+            debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.GetFuelCost(stats):0.##} COMBUSTIBLE / DISPARO";
             if (!stats.Hitscan) debugText.text += $"\nÁREA {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
             if (hitText) hitText.text = Time.time - weapon.LastHitTime < 0.5f ? $"IMPACTO  -{weapon.LastHitDamage:0.##}" : "";
             if (!MenuRoot.activeSelf) return;
@@ -162,14 +181,17 @@ namespace HandShooter
                 for (int finger = 0; finger < 4; finger++)
                     if ((preset.ActiveMask & (1 << finger)) != 0) group += (finger + 1).ToString();
                 presetLabels[digit].text = preset.IsSaved
-                    ? $"[{digit}]  {(matches ? "ACTUAL" : "GUARDADO")}\n{group} · {(preset.ThumbActive ? "RAYO" : "PROY.")}"
+                    ? $"[{digit}]  {(matches ? "ACTUAL" : "GUARDADO")}\n{group} · {(preset.ThumbActive || !hand.ThumbUnlocked ? "RAYO" : "PROY.")}"
                     : $"[{digit}]\nVACÍO";
             }
             if (presetFeedback && Time.unscaledTime >= presetFeedbackUntil)
                 presetFeedback.text = "Se conservan al reiniciar. En partida: 1–9 / 0 para cambiar.";
             mode.text = stats.Hitscan ? "RAYCAST / INSTANTÁNEO" : "PROYECTIL / EXPLOSIVO";
             mode.color = accent;
-            rules.text = $"Siempre queda al menos un cañón activo.\nLos dedos activos forman un solo grupo.\nPulgar activo: raycast, valores base.\nProyectil: daño ×{weapon.settings.projectileDamageMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}, combustible −{weapon.settings.projectileFuelEfficiency:P0}.\nExplosión: {weapon.settings.explosionDamageFraction:P0} del daño directo.";
+            rules.text = "Siempre queda al menos un cañón activo.\nLos dedos activos forman un solo grupo.\n" +
+                (hand.ThumbUnlocked
+                    ? $"Pulgar activo: raycast, valores base.\nProyectil: daño ×{weapon.settings.projectileDamageMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}, combustible −{weapon.settings.projectileFuelEfficiency:P0}.\nExplosión: {weapon.settings.explosionDamageFraction:P0} del daño directo."
+                    : "La mano dispara en modo láser hasta que recojas el pulgar.");
             menuStats.text = $"{stats.Damage:0.##}    DAÑO POR DISPARO\n\n{stats.Interval:0.##} s    ENTRE DISPAROS\n{1f / stats.Interval:0.##}    DISPAROS / SEGUNDO";
             if (!stats.Hitscan) menuStats.text += $"\nEXPLOSIÓN {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
             palmText.text = $"{hand.ActiveCount:00} ACTIVO(S) / {4 - hand.ActiveCount:00} INACTIVO(S)\nUN SOLO GRUPO / UN CAÑÓN";
@@ -181,9 +203,12 @@ namespace HandShooter
                 fingerText[i].color = hand.IsActive(i) ? new Color(0.02f, 0.09f, 0.08f) : ink;
                 fingerText[i].text = $"{i + 1:00}\n\n{names[i]}\n\n{(hand.IsActive(i) ? "ACTIVO" : "INACTIVO")}";
             }
-            thumb.image.color = hand.ThumbActive ? mint : orange;
+            thumb.interactable = hand.ThumbUnlocked;
+            thumb.image.color = hand.ThumbUnlocked ? (hand.ThumbActive ? mint : orange) : muted;
             thumbText.color = new Color(0.025f, 0.07f, 0.08f);
-            thumbText.text = $"PULGAR {(hand.ThumbActive ? "ACTIVO" : "INACTIVO")}\n{(hand.ThumbActive ? "Raycast · daño y espera base" : $"Proyectil · daño ×{weapon.settings.projectileDamageMultiplier:0.##} / espera ×{weapon.settings.projectileCooldownMultiplier:0.##}")}";
+            thumbText.text = hand.ThumbUnlocked
+                ? $"PULGAR {(hand.ThumbActive ? "ACTIVO" : "INACTIVO")}\n{(hand.ThumbActive ? "Raycast · daño y espera base" : $"Proyectil · daño ×{weapon.settings.projectileDamageMultiplier:0.##} / espera ×{weapon.settings.projectileCooldownMultiplier:0.##}")}"
+                : "PULGAR SIN EQUIPAR\nModo láser";
         }
 
     }

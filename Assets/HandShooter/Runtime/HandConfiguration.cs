@@ -8,7 +8,12 @@ namespace HandShooter
     {
         [SerializeField] private int activeMask = 1;
         [SerializeField] private bool thumbActive = true;
-        public bool ThumbActive { get => thumbActive; set => thumbActive = value; }
+        public bool ThumbUnlocked { get; internal set; } = true;
+        public bool ThumbActive
+        {
+            get => !ThumbUnlocked || thumbActive;
+            set { if (ThumbUnlocked) thumbActive = value; }
+        }
         public int ActiveMask => IsValidMask(activeMask) ? activeMask : 1;
         public int ActiveCount
         {
@@ -28,7 +33,7 @@ namespace HandShooter
         {
             if (!IsValidMask(mask)) return false;
             activeMask = mask;
-            thumbActive = thumb;
+            ThumbActive = thumb;
             return true;
         }
         public static bool IsValidMask(int mask)

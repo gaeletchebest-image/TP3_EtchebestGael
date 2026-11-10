@@ -19,6 +19,8 @@ namespace HandShooter
         internal bool IsLoadingSave => pauseMenu && pauseMenu.IsLoading;
         public bool IsDead { get; private set; }
         public bool spawnDefaultFuelPickups = true;
+        [SerializeField] private bool startsWithoutDash;
+        public bool DashUnlocked { get; private set; }
         public event System.Action<string> Died;
         public float DashCooldownFraction => settings == null || settings.dashCooldown <= 0f
             ? 1f : Mathf.Clamp01(1f - dashCooldownRemaining / settings.dashCooldown);
@@ -36,6 +38,7 @@ namespace HandShooter
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
+            DashUnlocked = !startsWithoutDash;
             if (GameSaveSession.CanSaveScene(gameObject.scene))
                 pauseMenu = gameObject.AddComponent<PauseMenu>();
         }
@@ -101,13 +104,7 @@ namespace HandShooter
                 move.y = (keyboard[settings.forwardKey].isPressed ? 1 : 0) - (keyboard[settings.backwardKey].isPressed ? 1 : 0);
             }
             move = Vector2.ClampMagnitude(move, 1f);
-            if (dashRemaining <= 0f && dashCooldownRemaining <= 0f && move.sqrMagnitude > 0f &&
-                keyboard != null && keyboard[settings.dashKey].wasPressedThisFrame)
-            {
-                dashDirection = (transform.right * move.x + transform.forward * move.y).normalized;
-                dashRemaining = Mathf.Max(0.01f, settings.dashDuration);
-                dashCooldownRemaining = Mathf.Max(0f, settings.dashCooldown);
-            }
+            if (keyboard != null && keyboard[settings.dashKey].wasPressedThisFrame) StartDash(move);
             verticalVelocity = controller.isGrounded && verticalVelocity < 0 ? -2f : verticalVelocity + settings.gravity * Time.deltaTime;
             Vector3 horizontalMovement;
             if (dashRemaining > 0f)
@@ -120,6 +117,14 @@ namespace HandShooter
                 horizontalMovement = (transform.right * move.x + transform.forward * move.y) * settings.moveSpeed;
             }
             controller.Move((horizontalMovement + Vector3.up * verticalVelocity) * Time.deltaTime);
+        }
+
+        private void StartDash(Vector2 move)
+        {
+            if (!DashUnlocked || dashRemaining > 0f || dashCooldownRemaining > 0f || move.sqrMagnitude <= 0f) return;
+            dashDirection = (transform.right * move.x + transform.forward * move.y).normalized;
+            dashRemaining = Mathf.Max(0.01f, settings.dashDuration);
+            dashCooldownRemaining = Mathf.Max(0f, settings.dashCooldown);
         }
 
         private static bool IsControlHeld(Keyboard keyboard) =>
@@ -154,7 +159,8 @@ namespace HandShooter
                     return;
                 }
 
-                inspection.Show(pinnedEnemy, true);
+                if (pinnedEnemy.HasLineOfSight(viewCamera)) inspection.Show(pinnedEnemy, true);
+                else inspection.Hide();
                 return;
             }
             pinnedEnemy = null;
@@ -188,11 +194,13 @@ namespace HandShooter
         private static bool CanInspect(DamageTarget target) =>
             target && target.isActiveAndEnabled && target.IsEnemy && target.Health > 0f;
 
+        internal void UnlockDash() => DashUnlocked = true;
+
         internal SavedGame.Player CaptureState() => new SavedGame.Player
         {
             position = transform.position, rotation = transform.rotation, pitch = pitch,
             verticalVelocity = verticalVelocity, dashDirection = dashDirection, dashRemaining = dashRemaining,
-            dashCooldown = dashCooldownRemaining, weapon = weapon.CaptureState()
+            dashCooldown = dashCooldownRemaining, dashLocked = !DashUnlocked, weapon = weapon.CaptureState()
         };
 
         internal void RestoreState(SavedGame.Player state)
@@ -204,12 +212,16 @@ namespace HandShooter
             viewCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
             verticalVelocity = state.verticalVelocity;
             dashDirection = state.dashDirection;
-            dashRemaining = state.dashRemaining;
-            dashCooldownRemaining = state.dashCooldown;
+            DashUnlocked = !startsWithoutDash || !state.dashLocked;
+            dashRemaining = DashUnlocked ? state.dashRemaining : 0f;
+            dashCooldownRemaining = DashUnlocked ? state.dashCooldown : 0f;
             weapon.RestoreState(state.weapon);
         }
 
-        public void SetMenuOpen(bool open) => SetMenu(open, pause: false);
+        public void SetMenuOpen(bool open)
+        {
+            if (!open || (weapon && weapon.IsEquipped)) SetMenu(open, pause: false);
+        }
 
         private void SetMenu(bool open, bool pause)
         {
