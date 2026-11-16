@@ -56,6 +56,12 @@ namespace HandShooter.Tests
         [UnityTest] public IEnumerator ActualShotRecordsDamageAndDeathCapturesCauseAndSnapshot()
         {
             var target = Object.FindObjectsByType<DamageTarget>(FindObjectsSortMode.None).OrderBy(t => Mathf.Abs(t.transform.position.x)).First();
+            Vector3 initialPosition = target.transform.position;
+            yield return new WaitForSeconds(0.5f);
+            Assert.That(target.GetComponentInParent<Animator>(), Is.Null);
+            Assert.That(target.transform.position, Is.EqualTo(initialPosition));
+            Assert.That(target.transform.position.z, Is.EqualTo(session.distance).Within(0.001f));
+            Assert.That(target.Health, Is.EqualTo(session.RuntimeProfile.shooter.targetHealth));
             session.player.viewCamera.transform.LookAt(target.transform.position);
             Assert.That(session.player.weapon.TryFire(), Is.True);
             Assert.That(session.Trial.Result.shots, Is.EqualTo(1));

@@ -2501,7 +2501,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a811c2cf10a53c2458b9d17db85aa677, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: HandShooter.CRT::HandShooter.CRT.CRTCameraEffect
   profile: {fileID: 11400000, guid: f4a3fe809d2c58e4ba9e3b98ad7187e0, type: 2}
 --- !u!114 &346174851
@@ -2514,7 +2514,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
   m_RenderShadows: 1
   m_RequiresDepthTextureOption: 2
@@ -7381,6 +7381,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Enemy Hunter
       objectReference: {fileID: 0}
+    - target: {fileID: 8189574656381480725, guid: 05ebb60d5845fa84eae1be37e01a44af, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -9661,6 +9665,10 @@ PrefabInstance:
     - target: {fileID: 8767789146275577996, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
       propertyPath: m_Name
       value: Enemy Sniper
+      objectReference: {fileID: 0}
+    - target: {fileID: 8767789146275577996, guid: f621a000ed8c3b84f86084a7252089d8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -14649,6 +14657,10 @@ PrefabInstance:
     - target: {fileID: 165657618624421186, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
       propertyPath: m_Name
       value: Enemy Kamikaze
+      objectReference: {fileID: 0}
+    - target: {fileID: 165657618624421186, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 350143505697155547, guid: 1953b516942f49b4c9b3908888e8d219, type: 3}
       propertyPath: m_LocalPosition.x

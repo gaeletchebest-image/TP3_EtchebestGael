@@ -159,6 +159,7 @@ namespace HandShooter.Editor
         {
             EnsureStationSettings(draft);
             var stationPrefab = RefuelingStationSetup.EnsurePrefab();
+            var dummyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/HandShooter/Prefabs/PracticeDummy.prefab");
             // Existing laboratory scenes also need to be loadable when repeating a trial.
             if (!EditorBuildSettings.scenes.Any(s => s.path == ScenePath && s.enabled))
                 EditorBuildSettings.scenes = EditorBuildSettings.scenes.Where(s => s.path != ScenePath)
@@ -169,6 +170,8 @@ namespace HandShooter.Editor
                 bool opened = !existing.isLoaded;
                 if (opened) existing = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
                 var labSession = existing.GetRootGameObjects().Select(g => g.GetComponent<BalanceLabSession>()).First(s => s);
+                labSession.handMenu = existing.GetRootGameObjects().Select(g => g.GetComponent<HandMenu>()).FirstOrDefault(menu => menu && menu.player == labSession.player);
+                labSession.practiceDummyPrefab = dummyPrefab;
                 labSession.refuelingStationPrefab = stationPrefab;
                 EditorSceneManager.MarkSceneDirty(existing);
                 if (opened) { EditorSceneManager.SaveScene(existing); EditorSceneManager.CloseScene(existing, true); }
@@ -190,6 +193,8 @@ namespace HandShooter.Editor
             player.spawnDefaultFuelPickups = false;
             var session = new GameObject("Laboratorio de balance").AddComponent<BalanceLabSession>();
             session.profile = draft; session.player = player;
+            session.handMenu = lab.GetRootGameObjects().Select(g => g.GetComponent<HandMenu>()).FirstOrDefault(menu => menu && menu.player == player);
+            session.practiceDummyPrefab = dummyPrefab;
             session.turretPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeSceneBuilder.TurretPrefabPath);
             session.kamikazePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrototypeSceneBuilder.KamikazePrefabPath);
             session.sniperPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SniperSetup.PrefabPath);

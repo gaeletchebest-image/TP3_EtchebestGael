@@ -12,6 +12,8 @@ namespace HandShooter
     {
         public BalanceProfile profile;
         public PrototypePlayer player;
+        public HandMenu handMenu;
+        public GameObject practiceDummyPrefab;
         public GameObject turretPrefab, kamikazePrefab, sniperPrefab, hunterPrefab;
         public GameObject refuelingStationPrefab;
         [Range(0f, 1f)] public float stationStartingFuel = 0.25f;
@@ -32,6 +34,7 @@ namespace HandShooter
         private readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
         private float startedAt;
         private bool ready;
+        private bool showDebugUi = true;
         private GUIStyle hudText;
 
         [Serializable]
@@ -54,6 +57,9 @@ namespace HandShooter
         {
             if (!profile || !profile.IsComplete || !player)
             { Debug.LogError("El laboratorio necesita un perfil completo y un jugador.", this); enabled = false; return; }
+            if (scenario == BalanceScenario.Blanco && !practiceDummyPrefab)
+            { Debug.LogError("El laboratorio necesita el prefab del dummy.", this); enabled = false; return; }
+            if (handMenu) handMenu.showDebugStats = showDebugUi;
             RuntimeProfile = Clone(profile);
             RuntimeProfile.shooter = Clone(profile.shooter);
             RuntimeProfile.turret = Clone(profile.turret);
@@ -132,10 +138,20 @@ namespace HandShooter
             {
                 BalanceScenario kind = scenario == BalanceScenario.GrupoMixto ?
                     new[] { BalanceScenario.Hunter, BalanceScenario.Sniper, BalanceScenario.Kamikazes, BalanceScenario.Torreta }[i % 4] : scenario;
+                Vector3 position = new Vector3((i - (count - 1) * 0.5f) * spacing, 0f, distance);
+                if (kind == BalanceScenario.Blanco)
+                {
+                    var dummy = Instantiate(practiceDummyPrefab, position, Quaternion.Euler(0f, 180f, 0f), root.transform);
+                    var target = dummy.GetComponentInChildren<DamageTarget>();
+                    target.settings = RuntimeProfile.shooter;
+                    targets.Add(target);
+                    continue;
+                }
+
                 GameObject prefab = kind == BalanceScenario.Hunter ? hunterPrefab : kind == BalanceScenario.Sniper ? sniperPrefab :
                     kind == BalanceScenario.Kamikazes ? kamikazePrefab : turretPrefab;
                 var enemy = Instantiate(prefab, root.transform);
-                enemy.transform.position = new Vector3((i - (count - 1) * 0.5f) * spacing, 1f, distance);
+                enemy.transform.position = position + Vector3.up;
                 enemy.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
                 var health = enemy.GetComponent<DamageTarget>();
                 health.settings = RuntimeProfile.shooter;
@@ -145,12 +161,7 @@ namespace HandShooter
                 var kamikaze = enemy.GetComponent<KamikazeEnemy>();
                 var sniper = enemy.GetComponent<SniperEnemy>();
                 var hunter = enemy.GetComponent<HunterEnemy>();
-                if (kind == BalanceScenario.Blanco)
-                {
-                    turret.enabled = false;
-                    enemy.name = "Blanco de balance";
-                }
-                else if (turret) { health.turretSettings = turret.settings = RuntimeProfile.turret; turret.target = player; }
+                if (turret) { health.turretSettings = turret.settings = RuntimeProfile.turret; turret.target = player; }
                 else if (kamikaze) { health.kamikazeSettings = kamikaze.settings = RuntimeProfile.kamikaze; kamikaze.target = player; }
                 else if (sniper) { health.sniperSettings = sniper.settings = RuntimeProfile.sniper; sniper.target = player; }
                 else if (hunter) { health.hunterSettings = hunter.settings = RuntimeProfile.hunter; hunter.target = player; }
@@ -168,7 +179,13 @@ namespace HandShooter
         private void Update()
         {
             if (!ready) return;
-            if (Keyboard.current != null && Keyboard.current.f5Key.wasPressedThisFrame) { RestartTrial(); return; }
+            var keyboard = Keyboard.current;
+            if (keyboard?.f5Key.wasPressedThisFrame == true) { RestartTrial(); return; }
+            if (keyboard?.f8Key.wasPressedThisFrame == true)
+            {
+                showDebugUi = !showDebugUi;
+                if (handMenu) handMenu.showDebugStats = showDebugUi;
+            }
             if (Trial.Finished) return;
             Trial.Result.seconds = Time.time - startedAt;
             bool cleared = targets.Count > 0 && targets.TrueForAll(t => !t || t.Health <= 0f);
@@ -217,7 +234,7 @@ namespace HandShooter
 
         private void OnGUI()
         {
-            if (!ready || Trial == null) return;
+            if (!ready || Trial == null || !showDebugUi) return;
             if (hudText == null) hudText = new GUIStyle(GUI.skin.label) { fontSize = 15, wordWrap = true, normal = { textColor = Color.white } };
             GUI.depth = -100;
             // Match the reference height of the existing HUD at higher Game View resolutions.
@@ -245,7 +262,7 @@ namespace HandShooter
                 if (ExitRequested != null && GUILayout.Button("Volver al laboratorio", GUILayout.Height(28))) ExitRequested.Invoke();
             }
             else if (GUILayout.Button("Finalizar y ver resultado")) Finish("Finalizada manualmente");
-            GUILayout.Label("F5: repetir · Tab: mano / pausa\nResultados y perfiles en la ventana de Unity", hudText);
+            GUILayout.Label("F5: repetir · F8: ocultar debug · Tab: mano / pausa\nResultados y perfiles en la ventana de Unity", hudText);
             GUILayout.EndArea();
         }
 
