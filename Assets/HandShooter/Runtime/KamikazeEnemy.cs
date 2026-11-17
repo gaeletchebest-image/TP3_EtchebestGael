@@ -93,7 +93,7 @@ namespace HandShooter
             foreach (var damageable in damagedTargets) damageable.TakeDamage(settings.blastDamage);
 
             damageTarget.enabled = false;
-            Destroy(gameObject);
+            damageTarget.DestroyEnemy();
         }
 
         private static bool HasLineOfSight(Vector3 origin, Collider targetCollider, int mask)

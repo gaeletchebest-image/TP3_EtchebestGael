@@ -44,6 +44,7 @@ namespace HandShooter
         private EnemyDefense defense;
         private EnemyVitalsDisplay vitals;
         private TextMesh statusLabel;
+        private bool destroyingEnemy;
         internal bool IsEnemy => turretSettings || kamikazeSettings || sniperSettings || hunterSettings;
         internal float RespawnRemaining => respawnAt < 0f ? -1f : Mathf.Max(0f, respawnAt - Time.time);
         internal void SetRespawnDelay(float seconds) => respawnAt = seconds < 0f ? -1f : Time.time + seconds;
@@ -166,8 +167,7 @@ namespace HandShooter
                 vitals?.SetVisible(false);
                 if (IsEnemy)
                 {
-                    body.enabled = hitCollider.enabled = false;
-                    Destroy(gameObject);
+                    DestroyEnemy();
                     return true;
                 }
                 SetRespawnDelay(settings.targetRespawnDelay);
@@ -176,6 +176,16 @@ namespace HandShooter
             RefreshLabel();
             return true;
         }
+
+        internal void DestroyEnemy()
+        {
+            if (destroyingEnemy) return;
+            destroyingEnemy = true;
+            EnemyDestructionEffect.Spawn(body, originalColor);
+            body.enabled = hitCollider.enabled = false;
+            Destroy(gameObject);
+        }
+
         public void ResetTarget()
         {
             Health = MaximumHealth;
