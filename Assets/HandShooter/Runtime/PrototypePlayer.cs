@@ -10,6 +10,10 @@ namespace HandShooter
     [DefaultExecutionOrder(-20)]
     public sealed class PrototypePlayer : MonoBehaviour
     {
+        private const float DashFieldOfViewBoost = 9f;
+        private const float DashViewAttack = 0.045f;
+        private const float DashViewRelease = 0.16f;
+
         public ShooterSettings settings;
         public Camera viewCamera;
         public HandWeapon weapon;
@@ -33,6 +37,7 @@ namespace HandShooter
         private Vector3 dashDirection;
         private float dashRemaining;
         private float dashCooldownRemaining;
+        private float dashViewStrength, dashStreakTravel;
         private float previousTimeScale = 1f;
         private EnemyInspection inspection;
         private DamageTarget pinnedEnemy;
@@ -92,8 +97,11 @@ namespace HandShooter
                 SetMenu(!IsPauseMenuOpen, pause: true);
             else if (keyboard != null && (keyboard[settings.menuKey].wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
                 SetMenuOpen(!IsMenuOpen || IsPauseMenuOpen);
-            viewCamera.fieldOfView = settings.fieldOfView;
-            if (IsMenuOpen || Cursor.lockState != CursorLockMode.Locked) return;
+            if (IsMenuOpen || Cursor.lockState != CursorLockMode.Locked)
+            {
+                SetDashView(0f);
+                return;
+            }
             dashCooldownRemaining = Mathf.Max(0f, dashCooldownRemaining - Time.deltaTime);
             if (Mouse.current != null)
             {
@@ -111,8 +119,11 @@ namespace HandShooter
             move = Vector2.ClampMagnitude(move, 1f);
             if (keyboard != null && keyboard[settings.dashKey].wasPressedThisFrame) StartDash(move);
             verticalVelocity = controller.isGrounded && verticalVelocity < 0 ? -2f : verticalVelocity + settings.gravity * Time.deltaTime;
+            bool dashing = dashRemaining > 0f;
+            float rampDuration = dashing ? DashViewAttack : DashViewRelease;
+            SetDashView(Mathf.MoveTowards(dashViewStrength, dashing ? 1f : 0f, Time.deltaTime / rampDuration));
             Vector3 horizontalMovement;
-            if (dashRemaining > 0f)
+            if (dashing)
             {
                 horizontalMovement = dashDirection * Mathf.Max(0.1f, settings.dashSpeed);
                 dashRemaining = Mathf.Max(0f, dashRemaining - Time.deltaTime);
@@ -130,6 +141,23 @@ namespace HandShooter
             dashDirection = (transform.right * move.x + transform.forward * move.y).normalized;
             dashRemaining = Mathf.Max(0.01f, settings.dashDuration);
             dashCooldownRemaining = Mathf.Max(0f, settings.dashCooldown);
+        }
+
+        private void SetDashView(float strength)
+        {
+            float eased = Mathf.SmoothStep(0f, 1f, strength);
+            if (viewCamera)
+            {
+                if (settings) viewCamera.fieldOfView = settings.fieldOfView + DashFieldOfViewBoost * eased;
+                if ((strength > 0f || dashViewStrength > 0f) && viewCamera.TryGetComponent<CRTCameraEffect>(out var crt))
+                {
+                    Vector3 direction = viewCamera.transform.InverseTransformDirection(dashDirection);
+                    dashStreakTravel += Time.deltaTime * (direction.z < -0.25f ? -2.7f : 2.7f);
+                    crt.SetDashMotion(eased, direction.x * 0.44f, dashStreakTravel);
+                }
+            }
+            dashViewStrength = strength;
+            if (strength <= 0f) dashStreakTravel = 0f;
         }
 
         private static bool IsControlHeld(Keyboard keyboard) =>
@@ -210,6 +238,7 @@ namespace HandShooter
 
         internal void RestoreState(SavedGame.Player state)
         {
+            SetDashView(0f);
             controller.enabled = false;
             transform.SetPositionAndRotation(state.position, state.rotation);
             controller.enabled = true;
@@ -235,6 +264,7 @@ namespace HandShooter
             if (!open && IsMenuOpen) Time.timeScale = previousTimeScale;
             IsMenuOpen = open;
             IsPauseMenuOpen = open && pause;
+            if (open) SetDashView(0f);
             Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = open;
             if (weapon) weapon.RequireTriggerRelease();
@@ -247,6 +277,7 @@ namespace HandShooter
             if (!origin.HasValue && source) origin = source.position;
             string detail = PlayerDeathPresentation.Describe(cause, viewCamera, origin);
             IsDead = true;
+            SetDashView(0f);
             deathFrame = Time.frameCount;
             pinnedEnemy = null;
             inspection?.Hide();
@@ -280,6 +311,7 @@ namespace HandShooter
         }
         private void OnDisable()
         {
+            SetDashView(0f);
             deathPresentation?.Dispose();
             deathPresentation = null;
             pinnedEnemy = null;

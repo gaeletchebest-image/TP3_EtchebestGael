@@ -19,12 +19,28 @@ Shader "Hidden/HandShooter/CRT"
             float4 _CRTVignette;  // strength, start, softness
             float4 _CRTScreen;    // display width/height, internal width/height
             float4 _CRTDeath;     // transition mode, progress
+            float4 _CRTDash;      // strength, horizontal vanishing point, radial travel
 
             float Hash(float2 p)
             {
                 float3 q = frac(float3(p.xyx) * 0.1031);
                 q += dot(q, q.yzx + 33.33);
                 return frac((q.x + q.y) * q.z);
+            }
+
+            float DashStreaks(float2 screen, float2 aspect)
+            {
+                float edge = smoothstep(0.59, 0.92, max(abs(screen.x), abs(screen.y)));
+                if (edge <= 0.0) return 0.0;
+
+                float2 fromFocus = (screen - float2(_CRTDash.y, 0.0)) * aspect / max(aspect.x, aspect.y);
+                float sector = (atan2(fromFocus.y, fromFocus.x) / TWO_PI + 0.5) * 58.0;
+                float ray = floor(sector);
+                float seed = Hash(float2(ray, 17.0));
+                float rayMask = 1.0 - smoothstep(0.026, 0.086, abs(frac(sector) - lerp(0.28, 0.72, seed)));
+                float wave = frac(length(fromFocus) * (1.0 + seed * 0.65) - _CRTDash.z + Hash(float2(ray, 31.0)));
+                float trail = smoothstep(0.0, 0.12, wave) * (1.0 - smoothstep(0.23 + seed * 0.24, 0.60, wave));
+                return edge * rayMask * trail * smoothstep(0.15, 0.85, seed);
             }
 
             half4 Frag(Varyings input) : SV_Target
@@ -88,6 +104,12 @@ Shader "Hidden/HandShooter/CRT"
                 float vignette = smoothstep(_CRTVignette.y,
                     _CRTVignette.y + max(_CRTVignette.z, 0.001), radius);
                 color.rgb *= 1.0 - vignette * _CRTVignette.x;
+
+                if (_CRTDash.x > 0.0)
+                {
+                    float streak = DashStreaks(p, aspect);
+                    color.rgb = lerp(color.rgb, half3(0.68, 0.92, 1.0), streak * _CRTDash.x * 0.46);
+                }
 
                 // Signed distance to the curved source rectangle; the radius uses the
                 // shorter screen dimension, so corners stay round on wide/tall screens.

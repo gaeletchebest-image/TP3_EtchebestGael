@@ -139,6 +139,31 @@ namespace HandShooter.CRT.Tests
             Assert.That(Render(320, 180)[center].r, Is.EqualTo(1f).Within(0.003f));
         }
 
+        [Test]
+        public void DashStreaksMoveAlongTheEdgesAndLeaveTheCenterClear()
+        {
+            const int width = 320, height = 180;
+            source.SetPixels(new[] { Color.gray, Color.gray, Color.gray, Color.gray });
+            source.Apply();
+            properties.SetVector("_CRTDash", new Vector4(1f, 0.25f, 0.3f, 0f));
+            var first = Render(width, height);
+            properties.SetVector("_CRTDash", new Vector4(1f, 0.25f, 0.55f, 0f));
+            var second = Render(width, height);
+            int visible = 0, moving = 0;
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                int index = y * width + x;
+                bool inside = Mathf.Abs((x + 0.5f) * 2f / width - 1f) <= 0.58f &&
+                    Mathf.Abs((y + 0.5f) * 2f / height - 1f) <= 0.58f;
+                if (inside) Assert.That(first[index].g, Is.EqualTo(0.5f).Within(0.003f));
+                if (first[index].g > 0.55f) visible++;
+                if (Mathf.Abs(first[index].g - second[index].g) > 0.045f) moving++;
+            }
+            Assert.That(visible, Is.GreaterThan(50));
+            Assert.That(moving, Is.GreaterThan(50));
+        }
+
         private Color[] Render(int width, int height)
         {
             var target = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);

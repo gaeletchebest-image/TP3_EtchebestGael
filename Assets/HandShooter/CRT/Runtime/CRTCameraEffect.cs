@@ -17,6 +17,10 @@ namespace HandShooter.CRT
         public Vector2Int LastInternalResolution { get; internal set; }
         public bool IsActive => isActiveAndEnabled && profile && profile.IsActive;
         internal Vector2 DeathTransition { get; private set; }
+        internal Vector3 DashMotion { get; private set; }
+
+        public void SetDashMotion(float strength, float centerX, float travel) =>
+            DashMotion = strength > 0f ? new Vector3(strength, centerX, travel) : Vector3.zero;
 
         public void SetDeathTransition(CRTDeathTransition style, float progress) =>
             DeathTransition = new Vector2((int)style + 1, Mathf.Clamp01(progress));
