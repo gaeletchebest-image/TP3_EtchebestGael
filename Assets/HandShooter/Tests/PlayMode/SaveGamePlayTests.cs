@@ -184,6 +184,7 @@ namespace HandShooter.Tests
             yield return null;
             Assert.That(player == null, Is.False, "The player must wait for a new key press.");
             Assert.That(player.deathScreen.activeInHierarchy, Is.True);
+            yield return new WaitForSecondsRealtime(1f);
             PressKey(player, Key.F5);
             yield return WaitForReload(player);
 

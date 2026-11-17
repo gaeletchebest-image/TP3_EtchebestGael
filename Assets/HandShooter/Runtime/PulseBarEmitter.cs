@@ -168,11 +168,11 @@ namespace HandShooter
             return nearest;
         }
 
-        private static bool HitPlayer(Collider contact)
+        private bool HitPlayer(Collider contact)
         {
             var player = contact.GetComponentInParent<PrototypePlayer>();
             if (!player) return false;
-            player.Die("Barrera de pulsos");
+            player.Die("Barrera de pulsos", transform, head.position);
             return true;
         }
 

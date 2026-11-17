@@ -1,3 +1,4 @@
+using HandShooter.CRT;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -14,6 +15,8 @@ namespace HandShooter
         public HandWeapon weapon;
         public GameObject deathScreen;
         public Text deathHint;
+        [SerializeField, Tooltip("Transición del CRT al morir.")]
+        private CRTDeathTransition deathTransition;
         public bool IsMenuOpen { get; private set; }
         internal bool IsPauseMenuOpen { get; private set; }
         internal bool IsLoadingSave => pauseMenu && pauseMenu.IsLoading;
@@ -35,6 +38,7 @@ namespace HandShooter
         private DamageTarget pinnedEnemy;
         private bool waitForControlRelease;
         private PauseMenu pauseMenu;
+        private PlayerDeathPresentation deathPresentation;
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
@@ -54,7 +58,8 @@ namespace HandShooter
             if (IsLoadingSave) return;
             if (IsDead)
             {
-                if (deathHint) deathHint.enabled = Mathf.Repeat(Time.unscaledTime, 0.9f) < 0.6f;
+                if (deathPresentation != null && !deathPresentation.Tick()) return;
+                if (deathPresentation == null && deathHint) deathHint.enabled = Mathf.Repeat(Time.unscaledTime, 0.9f) < 0.6f;
                 if (Time.frameCount != deathFrame && WasAnyKeyPressed(keyboard))
                 {
                     if (pauseMenu && pauseMenu.TryLoadLatest()) Time.timeScale = 1f;
@@ -234,9 +239,13 @@ namespace HandShooter
             Cursor.visible = open;
             if (weapon) weapon.RequireTriggerRelease();
         }
-        public void Die(string cause = "Enemigo")
+        public void Die(string cause = "Enemigo") => Die(cause, null);
+
+        internal void Die(string cause, Transform source, Vector3? origin = null)
         {
             if (IsDead || IsLoadingSave) return;
+            if (!origin.HasValue && source) origin = source.position;
+            string detail = PlayerDeathPresentation.Describe(cause, viewCamera, origin);
             IsDead = true;
             deathFrame = Time.frameCount;
             pinnedEnemy = null;
@@ -248,8 +257,16 @@ namespace HandShooter
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             if (weapon) weapon.RequireTriggerRelease();
-            if (deathScreen) deathScreen.SetActive(true);
-            else Debug.LogError("Player death screen is not assigned in the scene.", this);
+            if (deathScreen)
+            {
+                var subtitle = deathScreen.transform.Find("Death Subtitle");
+                if (subtitle && subtitle.TryGetComponent<Text>(out var label)) label.text = detail;
+                deathScreen.SetActive(true);
+            }
+
+            if (isActiveAndEnabled && viewCamera)
+                deathPresentation = new PlayerDeathPresentation(this, cause, detail, source, origin, deathTransition);
+            else if (!deathScreen) Debug.LogError("Player death presentation needs a view camera.", this);
         }
         private void RestartScene()
         {
@@ -263,6 +280,8 @@ namespace HandShooter
         }
         private void OnDisable()
         {
+            deathPresentation?.Dispose();
+            deathPresentation = null;
             pinnedEnemy = null;
             waitForControlRelease = false;
             inspection?.Hide();

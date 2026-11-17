@@ -18,6 +18,7 @@ Shader "Hidden/HandShooter/CRT"
             float4 _CRTNoise;     // strength, discrete frame, grain size
             float4 _CRTVignette;  // strength, start, softness
             float4 _CRTScreen;    // display width/height, internal width/height
+            float4 _CRTDeath;     // transition mode, progress
 
             float Hash(float2 p)
             {
@@ -30,6 +31,30 @@ Shader "Hidden/HandShooter/CRT"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float2 uv = input.texcoord;
+                float phase = _CRTDeath.y;
+                float shutdownMask = 1.0;
+                float phosphor = 0.0;
+                float dropout = 0.0;
+                if (_CRTDeath.x > 1.5)
+                {
+                    if (phase >= 0.91) return half4(0, 0, 0, 1);
+                    float collapseY = smoothstep(0.0, 0.60, phase);
+                    float collapseX = smoothstep(0.60, 0.90, phase);
+                    float2 beam = max(float2(1.0 - collapseX, 1.0 - collapseY), 2.0 / _CRTScreen.xy);
+                    uv = (uv - 0.5) / beam + 0.5;
+                    shutdownMask = all(abs(uv - 0.5) <= 0.5) ? 1.0 : 0.0;
+                    phosphor = smoothstep(0.45, 0.62, phase) * (1.0 - collapseX);
+                }
+                else if (_CRTDeath.x > 0.5)
+                {
+                    dropout = smoothstep(0.0, 0.09, phase) * (1.0 - smoothstep(0.46, 1.0, phase));
+                    float frame = floor(phase * 12.0);
+                    float band = frac(uv.y * 3.0 - frame * 0.23);
+                    float tears = step(0.70, band) - step(band, 0.15);
+                    float jitter = Hash(float2(floor(uv.y * 36.0), frame)) - 0.5;
+                    uv.x += (tears * 0.16 + jitter * 0.085) * dropout;
+                    uv.y += sin(phase * TWO_PI) * 0.047 * dropout;
+                }
                 float2 p = uv * 2.0 - 1.0;
                 float2 aspect = _CRTScreen.xy / max(min(_CRTScreen.x, _CRTScreen.y), 1.0);
                 float2 radial = p * aspect / max(aspect.x, aspect.y);
@@ -41,9 +66,10 @@ Shader "Hidden/HandShooter/CRT"
                 float2 safeUV = clamp(sampleUV, halfTexel, 1.0 - halfTexel);
                 half4 color = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, safeUV);
 
-                if (_CRTEffects.z > 0.0)
+                if (_CRTEffects.z > 0.0 || dropout > 0.0)
                 {
                     float2 offset = p * dot(p, p) * 0.5 * _CRTEffects.z / _CRTScreen.xy;
+                    offset.x += dropout * (5.0 / _CRTScreen.x + 0.007);
                     color.r = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp,
                         clamp(sampleUV + offset, halfTexel, 1.0 - halfTexel)).r;
                     color.b = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp,
@@ -55,7 +81,8 @@ Shader "Hidden/HandShooter/CRT"
 
                 float2 grain = floor(uv * _CRTScreen.zw / _CRTNoise.z);
                 float noise = Hash(grain + float2(_CRTNoise.y * 17.0, _CRTNoise.y * 29.0)) - 0.5;
-                color.rgb = max(0.0, color.rgb + noise * _CRTNoise.x);
+                color.rgb *= 1.0 - dropout * 0.67;
+                color.rgb = max(0.0, color.rgb + noise * (_CRTNoise.x + dropout * 0.24));
 
                 float radius = length(p) * 0.70710678;
                 float vignette = smoothstep(_CRTVignette.y,
@@ -70,7 +97,8 @@ Shader "Hidden/HandShooter/CRT"
                 float edge = max(fwidth(distance), 0.00001);
                 float mask = 1.0 - smoothstep(-edge, edge, distance);
                 if (_CRTEffects.x <= 0.0 && r <= 0.0) mask = 1.0;
-                return half4(color.rgb * mask, color.a);
+                color.rgb = lerp(color.rgb * mask, half3(0.74, 1.0, 0.88), phosphor);
+                return half4(color.rgb * shutdownMask, color.a);
             }
             ENDHLSL
         }

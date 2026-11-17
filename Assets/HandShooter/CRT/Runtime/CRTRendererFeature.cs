@@ -48,6 +48,7 @@ namespace HandShooter.CRT
             private static readonly int Noise = Shader.PropertyToID("_CRTNoise");
             private static readonly int Vignette = Shader.PropertyToID("_CRTVignette");
             private static readonly int Screen = Shader.PropertyToID("_CRTScreen");
+            private static readonly int Death = Shader.PropertyToID("_CRTDeath");
 
             public CRTPass(Material material) { this.material = material; }
 
@@ -85,6 +86,7 @@ namespace HandShooter.CRT
                     profile.vignette ? profile.vignetteIntensity * intensity : 0f,
                     profile.vignetteStart, profile.vignetteSoftness, 0f));
                 properties.SetVector(Screen, new Vector4(baseCamera.pixelWidth, baseCamera.pixelHeight, desc.width, desc.height));
+                properties.SetVector(Death, new Vector4(effect.DeathTransition.x, effect.DeathTransition.y, 0f, 0f));
 
                 var parameters = new RenderGraphUtils.BlitMaterialParameters(source, destination, material, 0,
                     properties, destinationSlice: 0, destinationMip: 0,

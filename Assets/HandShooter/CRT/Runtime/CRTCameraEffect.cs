@@ -5,6 +5,8 @@ using UnityEngine.Rendering.Universal;
 
 namespace HandShooter.CRT
 {
+    public enum CRTDeathTransition { SignalLoss, PowerOff }
+
     [ExecuteAlways, DisallowMultipleComponent, RequireComponent(typeof(Camera))]
     [AddComponentMenu("Rendering/CRT Camera Effect")]
     public sealed class CRTCameraEffect : MonoBehaviour
@@ -14,6 +16,12 @@ namespace HandShooter.CRT
 
         public Vector2Int LastInternalResolution { get; internal set; }
         public bool IsActive => isActiveAndEnabled && profile && profile.IsActive;
+        internal Vector2 DeathTransition { get; private set; }
+
+        public void SetDeathTransition(CRTDeathTransition style, float progress) =>
+            DeathTransition = new Vector2((int)style + 1, Mathf.Clamp01(progress));
+
+        public void ClearDeathTransition() => DeathTransition = Vector2.zero;
 
         private Camera viewCamera;
         private Camera finalCamera;

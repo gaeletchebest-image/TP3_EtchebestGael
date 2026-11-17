@@ -282,7 +282,7 @@ namespace HandShooter
             }
             beamRemaining = settings.beamDuration;
             UpdateStatus();
-            if (victim) victim.Die("Hunter");
+            if (victim) victim.Die("Hunter", transform);
         }
 
         private void Face(Vector3 direction)

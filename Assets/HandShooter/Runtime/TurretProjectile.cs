@@ -4,7 +4,7 @@ namespace HandShooter
 {
     public sealed class TurretProjectile : MonoBehaviour
     {
-        private Vector3 direction;
+        private Vector3 direction, launchPosition;
         private float speed, radius, remainingRange;
         private int mask;
         private Transform owner;
@@ -16,6 +16,7 @@ namespace HandShooter
         public void Initialize(Vector3 direction, TurretSettings settings, Transform owner)
         {
             this.direction = direction.normalized;
+            launchPosition = transform.position;
             this.owner = owner;
             speed = Mathf.Max(0.1f, settings.projectileSpeed);
             radius = Mathf.Max(0.01f, settings.projectileRadius);
@@ -46,7 +47,7 @@ namespace HandShooter
             if (nearest.collider)
             {
                 var player = nearest.collider.GetComponentInParent<PrototypePlayer>();
-                if (player) player.Die("Torreta");
+                if (player) player.Die("Torreta", owner, owner ? owner.position : launchPosition);
                 // Overlapping casts can report an empty contact point.
                 Vector3 origin = hitDistance > 0f ? nearest.point + nearest.normal * 0.015f : transform.position;
                 Detonate(origin);

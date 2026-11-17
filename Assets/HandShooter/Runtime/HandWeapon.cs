@@ -125,6 +125,7 @@ namespace HandShooter
             if (viewCamera) viewCamera.cullingMask |= excludedHandLayer;
             if (handCamera) Destroy(handCamera.gameObject);
         }
+        internal Camera FirstPersonCamera => handCamera;
         public void RequireTriggerRelease() { requireRelease = true; }
         internal void Equip()
         {

@@ -108,6 +108,37 @@ namespace HandShooter.CRT.Tests
             Assert.That(pixels[0].r, Is.InRange(0.87f, 0.90f));
         }
 
+        [Test]
+        public void DeathPowerOffCollapsesToALineThenAPointAndBlack()
+        {
+            const int width = 320, height = 180;
+            int center = height / 2 * width + width / 2;
+            int awayFromCenter = height / 2 * width + width / 5;
+            properties.SetVector("_CRTDeath", new Vector4(2f, 0.61f, 0f, 0f));
+            var line = Render(width, height);
+            Assert.That(line[center].g, Is.GreaterThan(0.85f));
+            Assert.That(line[awayFromCenter].g, Is.GreaterThan(0.85f));
+            Assert.That(line[center + 4 * width].g, Is.LessThan(0.01f));
+
+            properties.SetVector("_CRTDeath", new Vector4(2f, 0.865f, 0f, 0f));
+            var point = Render(width, height);
+            Assert.That(point[center].g, Is.GreaterThan(0.85f));
+            Assert.That(point[awayFromCenter].g, Is.LessThan(0.01f));
+
+            properties.SetVector("_CRTDeath", new Vector4(2f, 0.95f, 0f, 0f));
+            Assert.That(Render(width, height)[center].g, Is.LessThan(0.01f));
+        }
+
+        [Test]
+        public void DeathSignalLossDarkensAndThenRestoresTheImage()
+        {
+            int center = 90 * 320 + 160;
+            properties.SetVector("_CRTDeath", new Vector4(1f, 0.3f, 0f, 0f));
+            Assert.That(Render(320, 180)[center].r, Is.InRange(0.20f, 0.46f));
+            properties.SetVector("_CRTDeath", new Vector4(1f, 1f, 0f, 0f));
+            Assert.That(Render(320, 180)[center].r, Is.EqualTo(1f).Within(0.003f));
+        }
+
         private Color[] Render(int width, int height)
         {
             var target = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
