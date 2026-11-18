@@ -24,7 +24,7 @@ namespace HandShooter
         public HandConfiguration Hand { get; private set; }
         public HandPresetStore Presets { get; private set; }
         public ShotStats Stats => settings.Evaluate(Hand);
-        public float CooldownRemaining => cooldownFraction * Stats.Interval;
+        public float CooldownRemaining => cooldownFraction * cooldownDuration;
         public float LastHitDamage { get; private set; }
         public float LastHitTime { get; private set; } = -100f;
         [Header("Combustible")]
@@ -53,7 +53,7 @@ namespace HandShooter
         public event Action<int, DamageTarget, float, bool> DamageDealt;
         public event Action Reloaded;
         private int shotSequence;
-        private float cooldownFraction;
+        private float cooldownFraction, cooldownDuration;
         private bool requireRelease;
         private float recoil;
         private float reloadElapsed, activeReloadDuration;
@@ -179,7 +179,8 @@ namespace HandShooter
         {
             var keyboard = Keyboard.current;
             UpdatePresetInput(keyboard);
-            cooldownFraction = Mathf.Max(0f, cooldownFraction - Time.deltaTime / Stats.Interval);
+            if (cooldownFraction > 0f)
+                cooldownFraction = Mathf.Max(0f, cooldownFraction - Time.deltaTime / cooldownDuration);
             UpdateHandVisuals();
             if (keyboard != null && keyboard.rKey.wasPressedThisFrame && !player.IsMenuOpen && Cursor.lockState == CursorLockMode.Locked)
                 BeginReloadFuel();
@@ -195,11 +196,12 @@ namespace HandShooter
             ShotStats stats = Stats;
             float fuelCost = GetFuelCost(stats);
             if (!HasFuelFor(fuelCost)) return false;
+            cooldownDuration = stats.Interval;
+            cooldownFraction = 1f;
             Fuel = Mathf.Max(0f, Fuel - fuelCost);
             FuelChanged?.Invoke();
             int shotId = ++shotSequence;
             ShotFired?.Invoke(shotId, fuelCost);
-            cooldownFraction = 1f;
             recoil = 1f;
             Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
             int mask = settings.hitMask.value & ~4;
@@ -302,7 +304,8 @@ namespace HandShooter
         internal SavedGame.Weapon CaptureState() => new SavedGame.Weapon
         {
             fuel = Fuel, spareTanks = SpareTankCount, mask = Hand.ActiveMask, thumb = Hand.ThumbActive,
-            cooldown = cooldownFraction, reloading = IsReloading, reloadElapsed = reloadElapsed,
+            cooldown = cooldownFraction, cooldownDuration = cooldownDuration,
+            reloading = IsReloading, reloadElapsed = reloadElapsed,
             unequipped = !IsEquipped, thumbUnlocked = Hand.ThumbUnlocked
         };
 
@@ -314,6 +317,8 @@ namespace HandShooter
             Fuel = Mathf.Clamp(state.fuel, 0f, tankCapacity);
             SpareTankCount = Mathf.Max(0, state.spareTanks);
             cooldownFraction = Mathf.Clamp01(state.cooldown);
+            // Older saves store only the fraction, using the interval of the saved hand.
+            cooldownDuration = state.cooldownDuration > 0f ? state.cooldownDuration : Stats.Interval;
             UpdateHandVisuals();
             gameObject.SetActive(!state.unequipped);
             if (IsEquipped && state.reloading && !HasUnlimitedFuel) StartCoroutine(ReloadFuelAnimation(state.reloadElapsed));

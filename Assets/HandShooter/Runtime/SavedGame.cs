@@ -36,7 +36,7 @@ namespace HandShooter
         [Serializable]
         internal sealed class Weapon
         {
-            public float fuel, cooldown, reloadElapsed;
+            public float fuel, cooldown, cooldownDuration, reloadElapsed;
             public int spareTanks, mask;
             public bool thumb, reloading, unequipped, thumbUnlocked;
         }

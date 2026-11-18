@@ -87,24 +87,31 @@ namespace HandShooter.Tests
             Assert.That(weapon.Hand.ThumbActive, Is.False);
             Assert.That(weapon.Stats.Hitscan, Is.False);
         }
-        [Test] public void EquippingPreservesFuelAndCooldownAndEmptySlotsDoNothing()
+        [TestCase(1, true, 15, false)]
+        [TestCase(15, false, 1, true)]
+        public void EquippingPreservesFuelAndCooldownAndEmptySlotsDoNothing(
+            int originalMask, bool originalThumb, int presetMask, bool presetThumb)
         {
             player.SetMenuOpen(true);
-            weapon.Hand.TryApply(15, false);
+            weapon.Hand.TryApply(presetMask, presetThumb);
             weapon.SavePreset(4);
-            weapon.Hand.TryApply(1, true);
+            weapon.Hand.TryApply(originalMask, originalThumb);
             player.SetMenuOpen(false);
             Physics.SyncTransforms();
             Assert.That(weapon.TryFire(), Is.True);
             float fuel = weapon.Fuel;
-            float progress = weapon.CooldownRemaining / weapon.Stats.Interval;
+            float originalInterval = weapon.Stats.Interval;
             Assert.That(weapon.TryEquipPreset(4), Is.True);
+            Assert.That(weapon.Stats.Interval, Is.Not.EqualTo(originalInterval));
             Assert.That(weapon.Fuel, Is.EqualTo(fuel));
-            Assert.That(weapon.CooldownRemaining / weapon.Stats.Interval, Is.EqualTo(progress).Within(0.0001f));
+            Assert.That(weapon.CooldownRemaining, Is.EqualTo(originalInterval).Within(0.0001f));
             Assert.That(weapon.TryFire(), Is.False);
+            weapon.SendMessage("Update");
+            Assert.That(weapon.CooldownRemaining,
+                Is.EqualTo(Mathf.Max(0f, originalInterval - Time.deltaTime)).Within(0.0001f));
             Assert.That(weapon.TryEquipPreset(8), Is.False);
-            Assert.That(weapon.Hand.ActiveMask, Is.EqualTo(15));
-            Assert.That(weapon.Hand.ThumbActive, Is.False);
+            Assert.That(weapon.Hand.ActiveMask, Is.EqualTo(presetMask));
+            Assert.That(weapon.Hand.ThumbActive, Is.EqualTo(presetThumb));
         }
         [Test] public void EquippingDuringReloadKeepsTheReloadInProgress()
         {

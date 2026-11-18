@@ -57,7 +57,10 @@ namespace HandShooter.Tests
 
                 yield return WaitFor(() => IsGreen(Tint(fill)) && fill.enabled, "show the weapon is ready");
                 Assert.That(fill.transform.localScale.x, Is.EqualTo(full).Within(0.001f));
+                float originalInterval = weapon.Stats.Interval;
                 Assert.That(weapon.TryFire(), Is.True);
+                Assert.That(weapon.Hand.TryApply(1, true), Is.True);
+                Assert.That(weapon.CooldownRemaining, Is.EqualTo(originalInterval));
                 yield return WaitFor(() => fill.transform.localScale.x < full && IsRedOrAmber(Tint(fill)),
                     "reset the bar for the shot cooldown");
                 Assert.That(weapon.TryFire(), Is.False);
@@ -78,6 +81,7 @@ namespace HandShooter.Tests
                 yield return WaitFor(() => !weapon.IsReloading && fill.enabled && IsGreen(Tint(fill)), "return to the ready state after reloading");
                 Assert.That(fill.transform.localScale.x, Is.EqualTo(full).Within(0.001f));
                 Assert.That(weapon.TryFire(), Is.True);
+                Assert.That(weapon.CooldownRemaining, Is.EqualTo(weapon.Stats.Interval));
                 Assert.That(menu.crosshair.text, Is.EqualTo("+"));
             }
             finally
