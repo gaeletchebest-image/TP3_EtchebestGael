@@ -140,6 +140,12 @@ namespace HandShooter.Editor
             Cube("Wrist", new Vector3(0, -0.025f, -0.22f), new Vector3(0.17f, 0.11f, 0.3f), handMat, hand, false, true);
             var weapon = hand.gameObject.AddComponent<HandWeapon>();
             weapon.settings = settings; weapon.player = player; weapon.viewCamera = camera;
+            var chargePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/HandShooter/Prefabs/HandChargeDisplay.prefab");
+            var chargeDisplay = (GameObject)PrefabUtility.InstantiatePrefab(chargePrefab, hand);
+            chargeDisplay.transform.localPosition = chargePrefab.transform.localPosition;
+            var weaponFields = new SerializedObject(weapon);
+            weaponFields.FindProperty("chargeDisplay").objectReferenceValue = chargeDisplay.GetComponent<HandChargeDisplay>();
+            weaponFields.ApplyModifiedPropertiesWithoutUndo();
             weapon.fingerVisuals = new Transform[4];
             for (int i = 0; i < 4; i++)
                 weapon.fingerVisuals[i] = Cube("Finger " + i, new Vector3(-0.12f + i * 0.08f, 0.04f, 0.18f), new Vector3(0.05f, 0.065f, 0.29f), fingerMat, hand, false, true).transform;

@@ -45,6 +45,7 @@ namespace HandShooter
         public float FuelFraction => HasUnlimitedFuel ? 1f : tankCapacity <= 0f ? 0f : Fuel / tankCapacity;
         private bool CanReload => !HasUnlimitedFuel && !IsReloading && !ActiveRefuelingStation && SpareTankCount > 0 && Fuel < tankCapacity;
         internal float GetFuelCost(ShotStats stats) => HasUnlimitedFuel ? 0f : settings.EvaluateFuelCost(stats, fuelPerDamage);
+        private bool HasFuelFor(float cost) => Fuel + 0.0001f >= cost;
         public event Action<float> Hit;
         public event Action FuelChanged;
         public event Action<int> PresetSaved;
@@ -55,10 +56,11 @@ namespace HandShooter
         private float cooldownFraction;
         private bool requireRelease;
         private float recoil;
-        private float reloadElapsed;
+        private float reloadElapsed, activeReloadDuration;
         private Vector3 handRestPosition;
         private Quaternion handRestRotation;
         private Camera handCamera;
+        [SerializeField] private HandChargeDisplay chargeDisplay;
         private List<Camera> cameraStack;
         private readonly List<GameObject> handMeshes = new List<GameObject>();
         private int excludedHandLayer;
@@ -112,6 +114,14 @@ namespace HandShooter
         private void LateUpdate()
         {
             if (handCamera && viewCamera) handCamera.fieldOfView = viewCamera.fieldOfView;
+            if (!chargeDisplay || !chargeDisplay.isActiveAndEnabled) return;
+
+            if (IsReloading)
+                chargeDisplay.Show(reloadElapsed / activeReloadDuration, HandChargeDisplay.Reloading);
+            else if (!HasFuelFor(GetFuelCost(Stats)))
+                chargeDisplay.Show(0f, HandChargeDisplay.Empty, true);
+            else
+                chargeDisplay.Show(1f - cooldownFraction, cooldownFraction > 0f ? HandChargeDisplay.Cooldown : HandChargeDisplay.Ready);
         }
         private void OnDestroy()
         {
@@ -184,7 +194,7 @@ namespace HandShooter
             if (!IsEquipped || cooldownFraction > 0f || IsReloading || player.IsMenuOpen || Time.timeScale == 0f) return false;
             ShotStats stats = Stats;
             float fuelCost = GetFuelCost(stats);
-            if (Fuel + 0.0001f < fuelCost) return false;
+            if (!HasFuelFor(fuelCost)) return false;
             Fuel = Mathf.Max(0f, Fuel - fuelCost);
             FuelChanged?.Invoke();
             int shotId = ++shotSequence;
@@ -273,6 +283,7 @@ namespace HandShooter
         {
             IsReloading = true;
             float duration = Mathf.Max(0.1f, reloadDuration);
+            activeReloadDuration = duration;
             reloadElapsed = elapsed;
             while (reloadElapsed < duration)
             {
