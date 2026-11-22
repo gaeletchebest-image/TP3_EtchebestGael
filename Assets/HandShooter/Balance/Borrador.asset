@@ -27,7 +27,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a73f82fdcff0c042aa5bd39ba59c8f8, type: 3}
   m_Name: TurretSettings
   m_EditorClassIdentifier: HandShooter.Runtime::HandShooter.TurretSettings
-  initialHealth: 8
+  initialHealth: 6
   initialDefensePoints: 2
   defenseBarCapacity: 6
   detectionRange: 15
@@ -108,6 +108,17 @@ MonoBehaviour:
   explosionMaxRadius: 4
   explosionVisualDuration: 0.35
   explosionColor: {r: 1, g: 0.55, b: 0.15, a: 1}
+  grenadeEnabled: 1
+  grenadeDamageMultiplier: 3
+  grenadeCooldownMultiplier: 4
+  grenadeFuelMultiplier: 3
+  grenadeRadiusMultiplier: 3
+  grenadeFuseDuration: 2
+  grenadeLaunchSpeed: 10
+  grenadeUpwardSpeed: 3
+  grenadeGravity: 15
+  grenadeRadius: 0.14
+  grenadeColor: {r: 0.75, g: 0.35, b: 1, a: 1}
   range: 30
   hitMask:
     serializedVersion: 2
