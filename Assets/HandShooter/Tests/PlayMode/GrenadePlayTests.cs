@@ -65,14 +65,19 @@ namespace HandShooter.Tests
 
         private HandGrenade Launch(float damage = 3f)
         {
-            var grenade = HandGrenade.Spawn(origin, Vector3.down, damage, settings, weapon);
-            grenade.enabled = false;
-            return grenade;
+            return HandGrenade.Spawn(origin, Vector3.down, damage, settings, weapon);
         }
 
-        private void Land(HandGrenade grenade)
+        private static IEnumerator Steps(int count)
         {
-            for (int i = 0; i < 500 && !grenade.HasLanded; i++) grenade.Simulate(0.02f);
+            for (int i = 0; i < count; i++) yield return new WaitForFixedUpdate();
+        }
+
+        private static IEnumerator Land(HandGrenade grenade)
+        {
+            for (int i = 0; i < 250 && grenade && !grenade.HasLanded; i++)
+                yield return new WaitForFixedUpdate();
+            Assert.That(grenade, Is.Not.Null);
             Assert.That(grenade.HasLanded, Is.True);
         }
 
@@ -80,13 +85,14 @@ namespace HandShooter.Tests
         {
             var weak = Launch(3f);
             var strong = Launch(24f);
-            weak.Simulate(0.1f); strong.Simulate(0.1f);
+            yield return Steps(5);
             Assert.That(strong.transform.position, Is.EqualTo(weak.transform.position));
-            Land(weak); Land(strong);
-            weak.Simulate(0.45f); strong.Simulate(0.45f);
+            yield return Land(weak);
+            Assert.That(strong.HasLanded, Is.True);
+            yield return Steps(20);
             Assert.That(strong.FuseRemaining, Is.EqualTo(weak.FuseRemaining).Within(0.0001f));
             Assert.That(strong.FuseRemaining, Is.GreaterThan(0f));
-            weak.Simulate(0.06f); strong.Simulate(0.06f);
+            yield return Steps(7);
             yield return null;
             Assert.That(weak == null && strong == null, Is.True);
         }
@@ -98,19 +104,21 @@ namespace HandShooter.Tests
             new GameObject("Extra collider", typeof(BoxCollider)).transform.SetParent(near.transform, false);
             float before = near.Health;
             var grenade = Launch();
-            grenade.Simulate(0.1f);
+            yield return Steps(5);
             Assert.That(grenade.HasLanded, Is.False);
             Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
             Assert.That(near.Health, Is.EqualTo(before));
-            Land(grenade);
+            yield return Land(grenade);
             Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
             Vector3 landed = grenade.transform.position;
-            Time.timeScale = 0f; grenade.Simulate(2f);
+            Time.timeScale = 0f;
+            yield return new WaitForSecondsRealtime(0.06f);
             Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
-            Time.timeScale = 1f; grenade.Simulate(0.45f);
+            Time.timeScale = 1f;
+            yield return Steps(20);
             Assert.That(near.Health, Is.EqualTo(before));
             Assert.That(grenade.transform.position, Is.EqualTo(landed));
-            grenade.Simulate(0.06f); grenade.Simulate(1f);
+            yield return Steps(7);
             Assert.That(near.Health, Is.EqualTo(before - 3f));
             Assert.That(outside.Health, Is.EqualTo(before));
             yield return null;
@@ -128,8 +136,8 @@ namespace HandShooter.Tests
             settings.grenadeDamageMultiplier = 100f;
             settings.grenadeRadiusMultiplier = 0f;
             settings.grenadeFuseDuration = 100f;
-            Land(grenade);
-            grenade.Simulate(0.51f);
+            yield return Land(grenade);
+            yield return Steps(27);
             Assert.That(exposed.Health, Is.EqualTo(settings.targetHealth - 3f));
             Assert.That(covered.Health, Is.EqualTo(settings.targetHealth));
             yield return null;
@@ -142,14 +150,78 @@ namespace HandShooter.Tests
             wall.transform.localScale = new Vector3(4f, 8f, 0.02f);
             settings.grenadeLaunchSpeed = 30f;
             var grenade = HandGrenade.Spawn(origin, Vector3.forward, 3f, settings, weapon);
-            grenade.enabled = false;
-            grenade.Simulate(0.04f);
+            yield return Steps(3);
             Assert.That(grenade.transform.position.z, Is.LessThan(wall.transform.position.z));
             Assert.That(grenade.HasLanded, Is.False);
             Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
-            Land(grenade);
+            yield return Land(grenade);
             Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
             yield return null;
+        }
+
+        [UnityTest] public IEnumerator RigidbodyFlightUsesLaunchGravityAndPausesInMidair()
+        {
+            float launchGravity = settings.grenadeGravity;
+            var grenade = Launch();
+            var rigidbody = grenade.GetComponent<Rigidbody>();
+            var collider = grenade.GetComponent<SphereCollider>();
+            Assert.That(rigidbody, Is.Not.Null);
+            Assert.That(rigidbody.isKinematic, Is.False);
+            Assert.That(collider && !collider.isTrigger, Is.True);
+            settings.grenadeGravity = 100f;
+            float started = Time.fixedTime;
+            yield return Steps(5);
+            Assert.That(rigidbody.position.y, Is.LessThan(origin.y));
+            Assert.That(rigidbody.linearVelocity.y,
+                Is.EqualTo(-0.1f - launchGravity * (Time.fixedTime - started)).Within(0.01f));
+            Assert.That(grenade.HasLanded, Is.False);
+            Vector3 position = rigidbody.position, velocity = rigidbody.linearVelocity;
+            Time.timeScale = 0f;
+            yield return new WaitForSecondsRealtime(0.06f);
+            Assert.That(rigidbody.position, Is.EqualTo(position));
+            Assert.That(rigidbody.linearVelocity, Is.EqualTo(velocity));
+            Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
+            Time.timeScale = 1f;
+            yield return Land(grenade);
+            Assert.That(rigidbody.isKinematic, Is.True);
+        }
+
+        [UnityTest] public IEnumerator LandingOnEnemyDoesNotArmOrApplyContactDamage()
+        {
+            var enemy = Target(new Vector3(0f, -0.5f, 0f));
+            var grenade = Launch();
+            yield return Steps(15);
+            Assert.That(grenade.GetComponent<Rigidbody>().position.y, Is.GreaterThan(origin.y - 0.4f));
+            Assert.That(grenade.HasLanded, Is.False);
+            Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
+            Assert.That(enemy.Health, Is.EqualTo(settings.targetHealth));
+            enemy.transform.position += Vector3.right * 3f;
+            Physics.SyncTransforms();
+            yield return Land(grenade);
+            Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
+        }
+
+        [UnityTest] public IEnumerator PhysicalFlightRespectsHitMaskAndIgnoresPlayerLayerAndTriggers()
+        {
+            var excluded = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            excluded.layer = 8;
+            excluded.transform.position = origin + Vector3.forward;
+            excluded.transform.localScale = new Vector3(4f, 8f, 0.02f);
+            settings.hitMask &= ~(1 << 8);
+            var playerLayer = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            playerLayer.layer = 2;
+            playerLayer.transform.position = origin + Vector3.forward * 0.5f;
+            playerLayer.transform.localScale = excluded.transform.localScale;
+            var trigger = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            trigger.transform.position = origin + Vector3.forward * 0.75f;
+            trigger.transform.localScale = excluded.transform.localScale;
+            trigger.GetComponent<Collider>().isTrigger = true;
+            settings.grenadeLaunchSpeed = 30f;
+            var grenade = HandGrenade.Spawn(origin, Vector3.forward, 3f, settings, weapon);
+            yield return Steps(3);
+            Assert.That(grenade.GetComponent<Rigidbody>().position.z, Is.GreaterThan(origin.z + 1f));
+            Assert.That(grenade.HasLanded, Is.False);
+            Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
         }
 
         [UnityTest] public IEnumerator ThumbButtonCyclesAndDisablingRemovesGrenadeWithoutResettingCooldown()

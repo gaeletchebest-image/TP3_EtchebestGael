@@ -2,10 +2,11 @@ using UnityEngine;
 
 namespace HandShooter
 {
-    // Swept ballistic flight, followed by a stationary, fixed fuse on the ground.
+    // Rigidbody flight, followed by a stationary, fixed fuse on the ground.
+    [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
     public sealed class HandGrenade : MonoBehaviour
     {
-        private Vector3 velocity;
+        private Rigidbody physicsBody;
         private float gravity, radius, fuseDuration, fuseRemaining, flightAge;
         private int hitMask, shotId;
         private bool active;
@@ -38,7 +39,7 @@ namespace HandShooter
             shotId = sourceShotId;
             // Everything is captured at launch, including fuse and blast; later mode changes are harmless.
             explosion = settings.EvaluateGrenadeExplosion(damage);
-            velocity = direction.normalized * Mathf.Max(0.1f, settings.grenadeLaunchSpeed) +
+            Vector3 velocity = direction.normalized * Mathf.Max(0.1f, settings.grenadeLaunchSpeed) +
                 Vector3.up * Mathf.Max(0f, settings.grenadeUpwardSpeed);
             gravity = Mathf.Max(0.1f, settings.grenadeGravity);
             radius = Mathf.Max(0.01f, settings.grenadeRadius);
@@ -52,53 +53,50 @@ namespace HandShooter
             properties = new MaterialPropertyBlock();
             SetColor(color);
             transform.localScale = Vector3.one * (radius * 2f);
+            var sphere = GetComponent<SphereCollider>();
+            sphere.radius = 0.5f;
+            sphere.isTrigger = false;
+            // Preserve the shot mask, including ignoring the player and other grenades.
+            sphere.excludeLayers = ~hitMask;
+            physicsBody = GetComponent<Rigidbody>();
+            physicsBody.useGravity = false; // Per-shot gravity is applied as acceleration below.
+            physicsBody.linearDamping = 0f;
+            physicsBody.angularDamping = 0f;
+            physicsBody.constraints = RigidbodyConstraints.FreezeRotation;
+            physicsBody.interpolation = RigidbodyInterpolation.Interpolate;
+            physicsBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            physicsBody.linearVelocity = velocity;
             active = true;
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
-            if (Time.timeScale > 0f) Simulate(Time.deltaTime);
+            if (!active || Time.timeScale <= 0f) return;
+            if (HasLanded)
+            {
+                fuseRemaining = Mathf.Max(0f, fuseRemaining - Time.fixedDeltaTime);
+                float progress = 1f - fuseRemaining / fuseDuration;
+                ShooterAudio.Loop(transform, SoundCue.GrenadeFuse, true, 1f, 0.8f + progress * 1.2f);
+                SetColor(Color.Lerp(color, Color.white, progress * (0.5f + 0.5f * Mathf.Sin(progress * 50f))));
+                if (fuseRemaining <= 0.00001f) Detonate();
+                return;
+            }
+
+            flightAge += Time.fixedDeltaTime;
+            // Misses into a void are discarded without an airborne explosion.
+            if (flightAge > 30f) { active = false; Destroy(gameObject); return; }
+            physicsBody.AddForce(Vector3.down * gravity, ForceMode.Acceleration);
         }
 
-        public void Simulate(float deltaTime)
+        private void OnCollisionEnter(Collision collision) => CheckLanding(collision);
+        private void OnCollisionStay(Collision collision) => CheckLanding(collision);
+
+        private void CheckLanding(Collision collision)
         {
-            if (!active || deltaTime <= 0f || Time.timeScale <= 0f) return;
-            Physics.SyncTransforms();
-            while (deltaTime > 0f && active)
-            {
-                float step = Mathf.Min(0.02f, deltaTime);
-                deltaTime -= step;
-                if (HasLanded)
-                {
-                    fuseRemaining = Mathf.Max(0f, fuseRemaining - step);
-                    float progress = 1f - fuseRemaining / fuseDuration;
-                    ShooterAudio.Loop(transform, SoundCue.GrenadeFuse, true, 1f, 0.8f + progress * 1.2f);
-                    SetColor(Color.Lerp(color, Color.white, progress * (0.5f + 0.5f * Mathf.Sin(progress * 50f))));
-                    if (fuseRemaining <= 0.00001f) Detonate();
-                    continue;
-                }
-                flightAge += step;
-                // Misses into a void are discarded without an airborne explosion.
-                if (flightAge > 30f) { active = false; Destroy(gameObject); break; }
-                velocity += Vector3.down * (gravity * step);
-                Vector3 displacement = velocity * step;
-                float distance = displacement.magnitude;
-                if (distance <= 0f) continue;
-                if (!Physics.SphereCast(transform.position, radius, displacement / distance, out var hit,
-                    distance, hitMask, QueryTriggerInteraction.Ignore))
-                {
-                    transform.position += displacement;
-                    continue;
-                }
-                transform.position = hit.point + hit.normal * (radius + 0.005f);
-                if (hit.normal.y >= 0.5f && !hit.collider.GetComponentInParent<DamageTarget>()) Land();
-                else
-                {
-                    // Walls and enemies stop forward flight but do not arm or detonate the grenade.
-                    float inward = Vector3.Dot(velocity, hit.normal);
-                    if (inward < 0f) velocity -= hit.normal * inward;
-                }
-            }
+            // Walls and enemies collide physically but do not arm or detonate the grenade.
+            if (!active || HasLanded || collision.collider.GetComponentInParent<DamageTarget>()) return;
+            for (int i = 0; i < collision.contactCount; i++)
+                if (collision.GetContact(i).normal.y >= 0.5f) { Land(); return; }
         }
 
         private void Land()
@@ -106,7 +104,10 @@ namespace HandShooter
             HasLanded = true;
             ShooterAudio.Play(SoundCue.GrenadeLand, transform.position);
             ShooterAudio.Loop(transform, SoundCue.GrenadeFuse, true);
-            velocity = Vector3.zero;
+            physicsBody.linearVelocity = Vector3.zero;
+            physicsBody.angularVelocity = Vector3.zero;
+            physicsBody.collisionDetectionMode = CollisionDetectionMode.Discrete;
+            physicsBody.isKinematic = true;
             warning = new GameObject("Grenade blast warning").AddComponent<LineRenderer>();
             warning.gameObject.layer = 2;
             warning.transform.SetParent(transform, false);
