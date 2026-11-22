@@ -1,5 +1,15 @@
 # Hand Shooter — prototipo
 
+## Audio
+
+El juego incluye 83 clips originales sintetizados: movimiento y dash, los tres modos de la mano, impactos, defensas, explosiones, combustible, recarga, recogidas, enemigos y sus avisos, trampas de pulsos, puertas, cápsula, ascensores, desafíos, contador, interfaz y muerte CRT. También incluye ambiente industrial, zumbido de las estaciones y dos capas musicales que cambian entre exploración y combate.
+
+**Escape > Audio** permite ajustar General, Efectos, Ambiente y Música. Los niveles se aplican en vivo y se conservan entre partidas mediante PlayerPrefs. Los valores iniciales y la distancia audible se editan en `Assets/HandShooter/Resources/ShooterAudioSettings.asset`; las preferencias del jugador tienen prioridad sobre los volúmenes iniciales.
+
+`ShooterAudio` se crea al iniciar el jugador, sin configurar prefabs o escenas manualmente. Usa fuentes 3D para el mundo y 2D para la mano y la interfaz. La pausa congela efectos, bucles, ambiente y música; los menús y el sonido de muerte siguen funcionando. Los cambios de escena eliminan las fuentes anteriores. El sistema limita las fuentes a 32 efectos simultáneos y 24 bucles reutilizables, limita avisos repetidos de gatillo vacío y reserva prioridad para las amenazas.
+
+Los WAV están en `Assets/HandShooter/Resources/HandShooterAudio`, incluidos automáticamente en el build. Fueron creados con osciladores y ruido, sin grabaciones ni dependencias externas. Para regenerarlos: `python Tools/generate_game_audio.py` (requiere numpy); no hace falta Python para jugar ni para compilar el juego. Se pueden reemplazar los WAV manteniendo sus nombres y archivos `.meta`.
+
 ## Granada opcional
 
 El botón que antes alternaba el pulgar ahora recorre **Rayo → Proyectil → Granada**. La potencia sigue usando el grupo de cañones activo. La granada sale con una trayectoria con gravedad, cae y queda quieta al tocar el suelo; **recién entonces empieza una mecha fija de 2 segundos**. Chocar con una pared o un enemigo no la detona ni inicia la mecha. La pausa detiene tanto el vuelo como la mecha. Un anillo violeta muestra su radio mientras espera; la explosión respeta la cobertura y daña una sola vez a cada enemigo, sin daño directo adicional.

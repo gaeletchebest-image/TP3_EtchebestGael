@@ -36,8 +36,12 @@ namespace HandShooter
             {
                 if (distance > settings.detectionRange || !CanSeeTarget(distance)) return;
                 hasAcquiredTarget = true;
+                ShooterAudio.Play(SoundCue.EnemyAlert, transform.position);
             }
 
+            ShooterAudio.Loop(transform, SoundCue.KamikazeChase, true, 0.8f,
+                Mathf.Lerp(1.7f, 0.8f, Mathf.Clamp01(distance / Mathf.Max(1f, settings.detectionRange))));
+            ShooterAudio.Threat();
             if (distance <= settings.detonationRange)
             {
                 Detonate();
@@ -49,6 +53,8 @@ namespace HandShooter
             if (direction.sqrMagnitude > 0f)
                 transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
         }
+
+        private void OnDisable() => ShooterAudio.Loop(transform, SoundCue.KamikazeChase, false);
 
         private bool CanSeeTarget(float distance)
         {
@@ -66,6 +72,8 @@ namespace HandShooter
         {
             if (hasDetonated || !settings || !damageTarget || damageTarget.Health <= 0f) return;
             hasDetonated = true;
+            ShooterAudio.Loop(transform, SoundCue.KamikazeChase, false);
+            ShooterAudio.Play(SoundCue.KamikazeExplosion, transform.position);
 
             Vector3 origin = transform.position;
             float radius = Mathf.Max(0f, settings.blastRadius);

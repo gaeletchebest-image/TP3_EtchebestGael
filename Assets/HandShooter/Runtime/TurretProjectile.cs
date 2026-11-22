@@ -28,6 +28,7 @@ namespace HandShooter
             // Include that layer so the CharacterController can still receive enemy hits.
             mask = settings.hitMask.value | (1 << 2);
             initialized = true;
+            ShooterAudio.Loop(transform, SoundCue.ProjectileFlight, true);
         }
 
         private void Update()
@@ -59,9 +60,13 @@ namespace HandShooter
             else rangeWarning.Update(remainingRange);
         }
 
+        private void OnDisable() => ShooterAudio.Loop(transform, SoundCue.ProjectileFlight, false);
+
         private void Detonate(Vector3 position)
         {
             initialized = false;
+            ShooterAudio.Loop(transform, SoundCue.ProjectileFlight, false);
+            ShooterAudio.Play(SoundCue.EnemyImpact, position);
             ExplosionEffect.Spawn(position, radius * 3f, 0.25f, explosionMaterial, explosionColor);
             Destroy(gameObject);
         }

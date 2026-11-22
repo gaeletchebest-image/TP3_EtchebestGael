@@ -39,12 +39,15 @@ namespace HandShooter
             if (!player || player.IsDead) return;
 
             state = EncounterState.Fighting;
+            ShooterAudio.Encounter(this, true);
+            ShooterAudio.Ui(SoundCue.CombatStart);
             if (!TryClear()) SetDoors(entranceDoors, open: false);
         }
 
         private void Update()
         {
-            if (Time.timeScale > 0f && state == EncounterState.Fighting) TryClear();
+            if (Time.timeScale > 0f && state == EncounterState.Fighting)
+            { ShooterAudio.Encounter(this, true); TryClear(); }
         }
 
         private bool TryClear()
@@ -54,6 +57,8 @@ namespace HandShooter
                     return false;
 
             state = EncounterState.Cleared;
+            ShooterAudio.Encounter(this, false);
+            ShooterAudio.Ui(SoundCue.CombatClear);
             SetDoors(entranceDoors, open: true);
             SetDoors(exitDoors, open: true);
             return true;
@@ -62,7 +67,11 @@ namespace HandShooter
         private static void SetDoors(SlidingDoor[] doors, bool open, bool immediate = false)
         {
             foreach (var door in doors)
-                if (door) door.SetOpen(open, immediate);
+                if (door)
+                {
+                    if (!immediate) ShooterAudio.Play(open ? SoundCue.DoorUnlock : SoundCue.DoorLock, door.transform.position);
+                    door.SetOpen(open, immediate);
+                }
         }
     }
 }

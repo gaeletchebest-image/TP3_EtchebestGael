@@ -35,6 +35,8 @@ namespace HandShooter
             Vector3 direction = (aim - origin).normalized;
             if (direction == Vector3.zero || Time.time < nextShot) return;
             nextShot = Time.time + Mathf.Max(0.02f, settings.fireInterval);
+            ShooterAudio.Play(SoundCue.TurretFire, origin);
+            ShooterAudio.Threat();
             var shot = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             shot.name = "Turret Projectile";
             shot.layer = 2;

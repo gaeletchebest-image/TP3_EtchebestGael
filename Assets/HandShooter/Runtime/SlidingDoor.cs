@@ -55,6 +55,7 @@ namespace HandShooter
                 return;
             }
 
+            ShooterAudio.Play(open ? SoundCue.DoorOpen : SoundCue.DoorClose, transform.position);
             startOpenness = openness;
             progress = 0f;
         }
@@ -108,6 +109,7 @@ namespace HandShooter
                 ? Mathf.Lerp(startOpenness, target, progress)
                 : Mathf.SmoothStep(startOpenness, target, progress);
             panel.MovePosition(PanelPosition);
+            if (progress >= 1f) ShooterAudio.Play(SoundCue.DoorStop, transform.position);
         }
 
         private void OnValidate()

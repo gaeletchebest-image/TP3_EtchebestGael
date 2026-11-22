@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace HandShooter
 {
     [DefaultExecutionOrder(1000)]
-    internal sealed class PauseMenu : MonoBehaviour
+    internal sealed partial class PauseMenu : MonoBehaviour
     {
         private const int PageSize = 5;
         private static readonly Color Ink = new Color(0.90f, 0.95f, 0.97f);
@@ -61,6 +61,7 @@ namespace HandShooter
             }
             if (!player.IsPauseMenuOpen)
             {
+                if (IsAudioOpen) CloseAudio();
                 if (IsConfirmingDelete) CancelDelete();
                 if (overlay) overlay.SetActive(false);
                 return;
@@ -91,11 +92,13 @@ namespace HandShooter
             try
             {
                 session.Save();
+                ShooterAudio.Ui(SoundCue.Save);
                 if (overlay && overlay.activeSelf) RefreshSaves("Partida guardada.");
             }
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
             {
                 if (status) status.text = "No se pudo guardar la partida.";
+                ShooterAudio.Ui(SoundCue.Error);
                 Debug.LogWarning(error.Message, this);
             }
         }
@@ -112,6 +115,7 @@ namespace HandShooter
             {
                 saves.Clear();
                 status.text = "No se pudo leer la lista de partidas.";
+                ShooterAudio.Ui(SoundCue.Error);
                 Debug.LogWarning(error.Message, this);
             }
             ShowPage();
@@ -175,13 +179,14 @@ namespace HandShooter
         {
             int index = page * PageSize + row;
             if (IsLoading || IsConfirmingDelete || index >= saves.Count) return;
-            if (!TryLoad(saves[index])) status.text = "No se pudo cargar esa partida.";
+            if (!TryLoad(saves[index])) { ShooterAudio.Ui(SoundCue.Error); status.text = "No se pudo cargar esa partida."; }
         }
 
         private void RequestDelete(int row)
         {
             int index = page * PageSize + row;
             if (IsLoading || IsConfirmingDelete || index >= saves.Count) return;
+            ShooterAudio.Ui(SoundCue.UiConfirm);
             deleteTarget = saves[index];
             deleteDescription.text = $"{rows[row].title.text}  ·  {rows[row].date.text}";
             listControls.interactable = false;
@@ -191,6 +196,7 @@ namespace HandShooter
 
         internal void CancelDelete()
         {
+            if (deleteTarget != null && isActiveAndEnabled) ShooterAudio.Ui(SoundCue.UiCancel);
             deleteTarget = null;
             if (deleteDialog) deleteDialog.SetActive(false);
             if (listControls) listControls.interactable = true;
@@ -200,16 +206,19 @@ namespace HandShooter
         {
             if (!IsConfirmingDelete || IsLoading) return;
             var save = deleteTarget;
+            deleteTarget = null; // Confirming deletion must not play the cancellation sound.
             CancelDelete();
             try
             {
                 bool removedThumbnail = GameSaveSession.Delete(save);
+                ShooterAudio.Ui(SoundCue.Delete);
                 RefreshSaves(removedThumbnail ? "Partida eliminada." : "Partida eliminada. No se pudo borrar la miniatura.",
                     keepPage: true);
             }
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
             {
                 status.text = "No se pudo eliminar la partida.";
+                ShooterAudio.Ui(SoundCue.Error);
                 Debug.LogWarning(error.Message, this);
             }
         }
@@ -226,6 +235,7 @@ namespace HandShooter
             catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
             {
                 if (status) status.text = "No se pudo leer la lista de partidas.";
+                ShooterAudio.Ui(SoundCue.Error);
                 Debug.LogWarning(error.Message, this);
             }
             return false;
@@ -235,6 +245,7 @@ namespace HandShooter
         {
             if (!GameSaveSession.BeginLoad(save)) return false;
             loading = true;
+            ShooterAudio.OnNextScene(SoundCue.Load);
             if (controls) controls.interactable = false;
             if (status) status.text = "Cargando partida…";
             return true;
@@ -304,6 +315,8 @@ namespace HandShooter
             next = ActionButton(body, "›", new Rect(522f, 584f, 46f, 32f), () => { page++; ShowPage(); });
             pageLabel = Label(body, "", new Rect(78f, 584f, 436f, 32f), 15, Muted, TextAnchor.MiddleCenter);
             status = Label(body, "", new Rect(24f, 620f, 544f, 26f), 14, Mint);
+            ActionButton(body, "Audio", new Rect(444f, 20f, 124f, 32f), OpenAudio);
+            BuildAudioDialog(shade.transform);
             BuildDeleteDialog(shade.transform);
             overlay.SetActive(false);
         }
@@ -349,7 +362,8 @@ namespace HandShooter
             colors.highlightedColor = new Color(0.83f, 1f, 0.96f);
             colors.colorMultiplier = 1.3f;
             button.colors = colors;
-            button.onClick.AddListener(action);
+            UiAudioFeedback.Attach(button);
+            button.onClick.AddListener(() => { ShooterAudio.Ui(SoundCue.UiConfirm); action(); });
             if (!string.IsNullOrEmpty(caption))
                 Label(background.transform, caption, new Rect(0f, 0f, bounds.width, bounds.height), 17, Ink, TextAnchor.MiddleCenter);
             return button;

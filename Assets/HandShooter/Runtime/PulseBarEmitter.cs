@@ -99,7 +99,12 @@ namespace HandShooter
             {
                 var (bar, travelSpeed) = pulses[index];
                 if (bar && Advance(bar, travelSpeed * Time.deltaTime, mask)) continue;
-                if (bar) Destroy(bar.gameObject);
+                if (bar)
+                {
+                    ShooterAudio.Loop(bar, SoundCue.PulseFlight, false);
+                    ShooterAudio.Play(SoundCue.PulseImpact, bar.position);
+                    Destroy(bar.gameObject);
+                }
                 pulses.RemoveAt(index);
             }
         }
@@ -121,6 +126,8 @@ namespace HandShooter
                 Quaternion.LookRotation(forward, Vector3.up));
             shot.transform.localScale = size;
             pulses.Add((shot.transform, Mathf.Max(0.1f, speed)));
+            ShooterAudio.Play(SoundCue.PulseEmit, head.position);
+            ShooterAudio.Loop(shot.transform, SoundCue.PulseFlight, true);
         }
 
         private bool Advance(Transform bar, float distance, int mask)
@@ -179,7 +186,7 @@ namespace HandShooter
         private void OnDisable()
         {
             foreach (var (bar, _) in pulses)
-                if (bar) Destroy(bar.gameObject);
+                if (bar) { ShooterAudio.Loop(bar, SoundCue.PulseFlight, false); Destroy(bar.gameObject); }
             pulses.Clear();
         }
     }

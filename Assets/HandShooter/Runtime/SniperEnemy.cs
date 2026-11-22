@@ -114,6 +114,7 @@ namespace HandShooter
             if (!settings || !target || target.IsDead || health.Health <= 0f)
             {
                 StopMoving();
+                ShooterAudio.Loop(transform, SoundCue.SniperCharge, false);
                 HideWarning();
                 return;
             }
@@ -171,7 +172,10 @@ namespace HandShooter
                 stateElapsed += deltaTime;
                 float duration = Mathf.Max(0.1f, settings.chargeDuration);
                 ChargeProgress = Mathf.Clamp01(stateElapsed / duration);
+                bool wasLocked = IsAimLocked;
                 IsAimLocked = stateElapsed >= duration - Mathf.Clamp(settings.aimLockDuration, 0.01f, duration);
+                if (!wasLocked && IsAimLocked) ShooterAudio.Play(SoundCue.SniperLock, Origin);
+                ShooterAudio.Loop(transform, SoundCue.SniperCharge, true, 0.7f + ChargeProgress * 0.3f, 0.7f + ChargeProgress * 0.9f);
                 if (stateElapsed >= duration) Fire();
             }
             UpdateWarning();
@@ -180,6 +184,16 @@ namespace HandShooter
         private void SetState(AttackState state)
         {
             if (State == state) return;
+            if (State == AttackState.Charging)
+            {
+                ShooterAudio.Loop(transform, SoundCue.SniperCharge, false);
+                if (state == AttackState.Repositioning) ShooterAudio.Play(SoundCue.SniperCancel, Origin);
+            }
+            if (state == AttackState.Charging)
+            {
+                ShooterAudio.Threat();
+                ShooterAudio.Loop(transform, SoundCue.SniperCharge, true, 0.7f, 0.7f);
+            }
             State = state;
             stateElapsed = 0f;
             ChargeProgress = 0f;
@@ -339,6 +353,8 @@ namespace HandShooter
 
         private void Fire()
         {
+            ShooterAudio.Play(SoundCue.SniperFire, Origin);
+            ShooterAudio.Loop(transform, SoundCue.SniperCharge, false);
             Vector3 origin = Origin;
             float length = settings.maximumAttackRange + Mathf.Abs(TargetPoint.y - origin.y) + 1f;
             Vector3 end = origin + aimDirection * length;
@@ -471,6 +487,7 @@ namespace HandShooter
 
         private void OnDisable()
         {
+            ShooterAudio.Loop(transform, SoundCue.SniperCharge, false);
             StopMoving();
             HideWarning();
             if (shotBeam) shotBeam.enabled = false;

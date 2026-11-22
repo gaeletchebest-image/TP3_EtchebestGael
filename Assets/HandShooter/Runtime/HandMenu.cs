@@ -89,7 +89,7 @@ namespace HandShooter
                 fingers[i] = buttonObject.GetComponent<Button>();
                 fingerText[i] = buttonObject.GetComponentInChildren<Text>();
                 int index = i;
-                fingers[i].onClick.AddListener(() => weapon.Hand.TryToggle(index));
+                fingers[i].onClick.AddListener(() => ShooterAudio.Ui(weapon.Hand.TryToggle(index) ? SoundCue.FingerToggle : SoundCue.Invalid));
             }
             palmText = root.Find("Hand Menu Panel/Palm/Palm Label")?.GetComponent<Text>();
             thumb = root.Find("Hand Menu Panel/Thumb Button")?.GetComponent<Button>();
@@ -107,7 +107,10 @@ namespace HandShooter
             // Button graphics were authored with raycastTarget disabled, so the
             // EventSystem could not hit them even though the Buttons were enabled.
             foreach (Button button in root.GetComponentsInChildren<Button>(true))
-                if (button.targetGraphic is Graphic graphic) graphic.raycastTarget = true;
+                {
+                    UiAudioFeedback.Attach(button);
+                    if (button.targetGraphic is Graphic graphic) graphic.raycastTarget = true;
+                }
             thumb.onClick.AddListener(weapon.CycleMode);
             resume.onClick.AddListener(() => player.SetMenuOpen(false));
             presetFeedback = root.Find("Hand Menu Panel/Menu Footer")?.GetComponent<Text>();

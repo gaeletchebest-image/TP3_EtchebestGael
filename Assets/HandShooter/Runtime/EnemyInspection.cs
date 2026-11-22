@@ -72,6 +72,7 @@ namespace HandShooter
 
         public void Show(DamageTarget target, bool pinned)
         {
+            if (!canvasObject.activeSelf) ShooterAudio.Ui(SoundCue.Inspect);
             var (name, attack, vision, minimum) = GetRanges(target);
             var values = (target.Health, target.MaximumHealth, target.DefensePoints, target.DefenseBar,
                 target.DefenseBarCapacity, attack, vision, minimum);

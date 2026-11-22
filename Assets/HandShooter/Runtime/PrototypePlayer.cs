@@ -34,6 +34,7 @@ namespace HandShooter
         private CharacterController controller;
         private int deathFrame;
         private float pitch, verticalVelocity;
+        private float footstepDistance;
         private Vector3 dashDirection;
         private float dashRemaining;
         private float dashCooldownRemaining;
@@ -47,6 +48,7 @@ namespace HandShooter
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
+            ShooterAudio.Initialize(this);
             DashUnlocked = !startsWithoutDash;
             if (GameSaveSession.CanSaveScene(gameObject.scene))
                 pauseMenu = gameObject.AddComponent<PauseMenu>();
@@ -70,6 +72,11 @@ namespace HandShooter
                     if (pauseMenu && pauseMenu.TryLoadLatest()) Time.timeScale = 1f;
                     else RestartScene();
                 }
+                return;
+            }
+            if (pauseMenu && pauseMenu.IsAudioOpen)
+            {
+                if (keyboard?.escapeKey.wasPressedThisFrame == true) pauseMenu.CloseAudio();
                 return;
             }
             if (pauseMenu && pauseMenu.IsConfirmingDelete)
@@ -102,7 +109,9 @@ namespace HandShooter
                 SetDashView(0f);
                 return;
             }
+            float previousCooldown = dashCooldownRemaining;
             dashCooldownRemaining = Mathf.Max(0f, dashCooldownRemaining - Time.deltaTime);
+            if (previousCooldown > 0f && dashCooldownRemaining == 0f) ShooterAudio.Local(SoundCue.DashReady);
             if (Mouse.current != null)
             {
                 Vector2 delta = Mouse.current.delta.ReadValue() * settings.mouseSensitivity;
@@ -132,12 +141,32 @@ namespace HandShooter
             {
                 horizontalMovement = (transform.right * move.x + transform.forward * move.y) * settings.moveSpeed;
             }
+            Vector3 beforeMove = transform.position;
+            bool wasGrounded = controller.isGrounded;
+            float fallSpeed = verticalVelocity;
             controller.Move((horizontalMovement + Vector3.up * verticalVelocity) * Time.deltaTime);
+            if (!wasGrounded && controller.isGrounded && fallSpeed < -4f) ShooterAudio.Local(SoundCue.Land);
+            Vector3 walked = transform.position - beforeMove;
+            walked.y = 0f;
+            if (controller.isGrounded && !dashing && move.sqrMagnitude > 0f)
+            {
+                footstepDistance += walked.magnitude;
+                if (footstepDistance >= 1.65f)
+                {
+                    footstepDistance %= 1.65f;
+                    bool metal = Physics.Raycast(transform.position + Vector3.up * 0.15f, Vector3.down,
+                        out var floor, 1.8f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) &&
+                        floor.collider.GetComponentInParent<CargoLift>();
+                    ShooterAudio.Local(metal ? SoundCue.StepMetal : SoundCue.StepSolid);
+                }
+            }
+            else footstepDistance = 0f;
         }
 
         private void StartDash(Vector2 move)
         {
             if (!DashUnlocked || dashRemaining > 0f || dashCooldownRemaining > 0f || move.sqrMagnitude <= 0f) return;
+            ShooterAudio.Local(SoundCue.Dash);
             dashDirection = (transform.right * move.x + transform.forward * move.y).normalized;
             dashRemaining = Mathf.Max(0.01f, settings.dashDuration);
             dashCooldownRemaining = Mathf.Max(0f, settings.dashCooldown);
@@ -187,6 +216,7 @@ namespace HandShooter
                 if (keyboard != null && (keyboard.leftCtrlKey.wasPressedThisFrame || keyboard.rightCtrlKey.wasPressedThisFrame))
                 {
                     pinnedEnemy = null;
+                    ShooterAudio.Ui(SoundCue.UiCancel);
                     waitForControlRelease = controlHeld;
                     inspection.Hide();
                     return;
@@ -204,7 +234,7 @@ namespace HandShooter
                 if (CanInspect(target))
                 {
                     if (Mouse.current?.rightButton.wasPressedThisFrame == true)
-                        pinnedEnemy = target;
+                        { pinnedEnemy = target; ShooterAudio.Ui(SoundCue.Pin); }
 
                     inspection ??= new EnemyInspection(transform);
                     inspection.Show(target, pinnedEnemy != null);
@@ -227,7 +257,12 @@ namespace HandShooter
         private static bool CanInspect(DamageTarget target) =>
             target && target.isActiveAndEnabled && target.IsEnemy && target.Health > 0f;
 
-        internal void UnlockDash() => DashUnlocked = true;
+        internal void UnlockDash()
+        {
+            if (DashUnlocked) return;
+            DashUnlocked = true;
+            ShooterAudio.Local(SoundCue.Unlock);
+        }
 
         internal SavedGame.Player CaptureState() => new SavedGame.Player
         {
@@ -260,6 +295,7 @@ namespace HandShooter
         private void SetMenu(bool open, bool pause)
         {
             if (IsDead) return;
+            if (open != IsMenuOpen) ShooterAudio.Ui(open ? SoundCue.MenuOpen : SoundCue.MenuClose);
             if (open && !IsMenuOpen) { previousTimeScale = Time.timeScale; Time.timeScale = 0f; }
             if (!open && IsMenuOpen) Time.timeScale = previousTimeScale;
             IsMenuOpen = open;
@@ -277,6 +313,7 @@ namespace HandShooter
             if (!origin.HasValue && source) origin = source.position;
             string detail = PlayerDeathPresentation.Describe(cause, viewCamera, origin);
             IsDead = true;
+            ShooterAudio.PlayerDied(cause);
             SetDashView(0f);
             deathFrame = Time.frameCount;
             pinnedEnemy = null;
@@ -301,6 +338,7 @@ namespace HandShooter
         }
         private void RestartScene()
         {
+            ShooterAudio.OnNextScene(SoundCue.Restart);
             Time.timeScale = 1f;
             SceneManager.LoadScene(SceneManager.GetActiveScene().path);
         }

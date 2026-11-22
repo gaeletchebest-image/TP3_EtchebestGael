@@ -208,6 +208,7 @@ namespace HandShooter
         {
             if (!settings || health.Health <= 0f) return;
             if (!target) target = FindFirstObjectByType<PrototypePlayer>();
+            if (!IsAlerted) ShooterAudio.Play(SoundCue.EnemyAlert, transform.position);
             IsAlerted = true;
             State = BehaviourState.Chasing;
             repathRemaining = 0f;
@@ -262,6 +263,8 @@ namespace HandShooter
 
         private void Fire()
         {
+            ShooterAudio.Play(SoundCue.HunterFire, Origin);
+            ShooterAudio.Threat();
             StopMoving();
             Vector3 origin = Origin;
             Vector3 offset = TargetPoint - origin;

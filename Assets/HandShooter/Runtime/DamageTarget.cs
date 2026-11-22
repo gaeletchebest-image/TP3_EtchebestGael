@@ -62,6 +62,7 @@ namespace HandShooter
                 vitals = new EnemyVitalsDisplay(this, statusLabel);
             }
             ResetTarget();
+            if (IsEnemy && !turretSettings) gameObject.AddComponent<RobotMotionAudio>();
         }
 
         private void OnDisable() => vitals?.SetVisible(false);
@@ -155,8 +156,11 @@ namespace HandShooter
         private bool ApplyDamage(float amount, bool playerShot)
         {
             if (respawnAt >= 0f || Health <= 0f || amount <= 0f) return false;
+            int oldDefense = defense.Points;
             amount *= defense.DamageMultiplier;
             if (playerShot) defense.RegisterPlayerHit();
+            ShooterAudio.Play(oldDefense > defense.Points ? SoundCue.ShieldBreak :
+                oldDefense > 0 ? SoundCue.ShieldHit : SoundCue.TargetHit, transform.position);
             LastDamage = amount;
             Health = Mathf.Max(0, Health - amount);
             flashUntil = Time.time + 0.12f;
@@ -181,6 +185,7 @@ namespace HandShooter
         {
             if (destroyingEnemy) return;
             destroyingEnemy = true;
+            ShooterAudio.Play(SoundCue.EnemyDestroy, transform.position);
             EnemyDestructionEffect.Spawn(body, originalColor);
             body.enabled = hitCollider.enabled = false;
             Destroy(gameObject);
@@ -188,6 +193,7 @@ namespace HandShooter
 
         public void ResetTarget()
         {
+            if (DestroyedCount > 0 && Health <= 0f && !IsEnemy) ShooterAudio.Play(SoundCue.TargetRespawn, transform.position);
             Health = MaximumHealth;
             defense = new EnemyDefense(InitialDefensePoints, InitialDefenseCapacity);
             LastDamage = 0;

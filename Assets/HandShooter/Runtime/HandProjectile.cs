@@ -52,6 +52,7 @@ namespace HandShooter
                     if (!collider.isTrigger && (hitMask & (1 << collider.gameObject.layer)) != 0)
                         targetMotion[collider] = new TargetMotion { Position = collider.transform.position };
             initialized = true;
+            ShooterAudio.Loop(transform, SoundCue.ProjectileFlight, true);
             if (FindImpact(Vector3.zero, 1f, out var impact)) Detonate(impact.Collider, impact.Point, impact.Normal);
         }
         private void Update()
@@ -142,6 +143,8 @@ namespace HandShooter
         {
             if (!initialized) return;
             initialized = false;
+            ShooterAudio.Loop(transform, SoundCue.ProjectileFlight, false);
+            ShooterAudio.Play(SoundCue.ProjectileExplosion, point, Mathf.Clamp(0.8f + damage * 0.025f, 0.8f, 1.4f));
             // Keep the origin just outside the struck surface so cover blocks the blast correctly.
             Vector3 origin = point + normal * 0.015f;
             var recipients = CollectBlastTargets(origin, explosion, hitMask);
@@ -173,6 +176,8 @@ namespace HandShooter
             }
             return recipients;
         }
+        private void OnDisable() => ShooterAudio.Loop(transform, SoundCue.ProjectileFlight, false);
+
         private void ApplyDamage(DamageTarget target, float amount)
         {
             if (owner) owner.Damage(target, amount, shotId);

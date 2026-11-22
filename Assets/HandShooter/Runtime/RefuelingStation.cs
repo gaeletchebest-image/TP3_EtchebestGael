@@ -28,6 +28,8 @@ namespace HandShooter
 
         private void Update()
         {
+            ShooterAudio.Loop(transform, SoundCue.StationHum, true, 0.45f);
+            if (IsFilling) ShooterAudio.Loop(transform, SoundCue.RefuelLoop, true, 1f, 0.8f + Progress * 0.5f);
             // Death and save restoration can pause the clock on the same frame.
             if (recipient && (!CanFill(recipient) || weapon.ActiveRefuelingStation != this))
             {
@@ -49,6 +51,7 @@ namespace HandShooter
                     Progress = missingFuel <= 0f ? 1f : Mathf.Clamp01(pendingFuel / missingFuel);
                     if (Progress >= 1f)
                     {
+                        ShooterAudio.Play(SoundCue.RefuelEnd, transform.position);
                         weapon.AddFuel(weapon.tankCapacity);
                         CancelFill(false);
                     }
@@ -75,6 +78,7 @@ namespace HandShooter
                 weapon = player.weapon;
                 weapon.ActiveRefuelingStation = this;
                 pendingFuel = Progress = 0f;
+                ShooterAudio.Play(SoundCue.RefuelStart, transform.position);
                 break;
             }
         }
@@ -96,6 +100,8 @@ namespace HandShooter
 
         internal void CancelFill(bool grantPartial)
         {
+            ShooterAudio.Loop(transform, SoundCue.RefuelLoop, false);
+            if (grantPartial && recipient && isActiveAndEnabled) ShooterAudio.Play(SoundCue.RefuelCancel, transform.position);
             var previous = weapon;
             float amount = PendingFuel * (settings ? Mathf.Clamp01(settings.interruptedFillFraction) : 0f);
             if (previous && previous.ActiveRefuelingStation == this) previous.ActiveRefuelingStation = null;
@@ -116,6 +122,8 @@ namespace HandShooter
 
         private void OnDisable()
         {
+            ShooterAudio.Loop(transform, SoundCue.StationHum, false);
+            ShooterAudio.Loop(transform, SoundCue.RefuelLoop, false);
             CancelFill(recipient && !recipient.IsDead && weapon && weapon.isActiveAndEnabled);
             UpdateDisplay();
         }

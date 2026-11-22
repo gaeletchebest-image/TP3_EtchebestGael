@@ -41,6 +41,7 @@ namespace HandShooter
         private bool travelQueued;
         private bool travelling;
         private bool destinationUpper;
+        private bool gateMovingAudio;
 
         internal float DescentProgress => 1f - liftPosition;
         internal bool IsGateOpen => gatePosition == 1f;
@@ -113,6 +114,7 @@ namespace HandShooter
 
             if (travelling)
             {
+                ShooterAudio.Loop(carriage, SoundCue.LiftMotor, true);
                 MoveCarriage();
                 return;
             }
@@ -133,17 +135,29 @@ namespace HandShooter
                     return;
                 }
 
+                if (!gateMovingAudio)
+                {
+                    gateMovingAudio = true;
+                    ShooterAudio.Play(gateRequestedOpen ? SoundCue.DoorOpen : SoundCue.DoorClose, carriage.position);
+                }
                 float duration = gateRequestedOpen ? openClip.length : closeClip.length;
                 gatePosition = Mathf.MoveTowards(gatePosition, target, Time.deltaTime / duration);
                 SampleGate();
                 Physics.SyncTransforms();
                 UpdateIndicators();
+                if (gatePosition == target)
+                {
+                    gateMovingAudio = false;
+                    ShooterAudio.Play(SoundCue.DoorStop, carriage.position);
+                }
             }
 
             if (travelQueued && gatePosition == 0f)
             {
                 travelQueued = false;
                 travelling = true;
+                ShooterAudio.Play(SoundCue.LiftStart, carriage.position);
+                ShooterAudio.Loop(carriage, SoundCue.LiftMotor, true);
             }
         }
 
@@ -207,6 +221,8 @@ namespace HandShooter
             if (liftPosition != destination) return;
             upperStop = destinationUpper;
             travelling = false;
+            ShooterAudio.Loop(carriage, SoundCue.LiftMotor, false);
+            ShooterAudio.Play(SoundCue.LiftStop, carriage.position);
             if (operation != Operation.Departure || upperStop) OpenGate();
         }
 
@@ -269,6 +285,8 @@ namespace HandShooter
             destinationUpper = state.destinationUpper;
             ApplyPose();
         }
+
+        private void OnDisable() { if (carriage) ShooterAudio.Loop(carriage, SoundCue.LiftMotor, false); }
 
         private bool IsStandingOnDeck(CharacterController rider)
         {

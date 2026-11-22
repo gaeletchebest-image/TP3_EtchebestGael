@@ -72,6 +72,7 @@ namespace HandShooter
                 {
                     fuseRemaining = Mathf.Max(0f, fuseRemaining - step);
                     float progress = 1f - fuseRemaining / fuseDuration;
+                    ShooterAudio.Loop(transform, SoundCue.GrenadeFuse, true, 1f, 0.8f + progress * 1.2f);
                     SetColor(Color.Lerp(color, Color.white, progress * (0.5f + 0.5f * Mathf.Sin(progress * 50f))));
                     if (fuseRemaining <= 0.00001f) Detonate();
                     continue;
@@ -103,6 +104,8 @@ namespace HandShooter
         private void Land()
         {
             HasLanded = true;
+            ShooterAudio.Play(SoundCue.GrenadeLand, transform.position);
+            ShooterAudio.Loop(transform, SoundCue.GrenadeFuse, true);
             velocity = Vector3.zero;
             warning = new GameObject("Grenade blast warning").AddComponent<LineRenderer>();
             warning.gameObject.layer = 2;
@@ -127,10 +130,14 @@ namespace HandShooter
             body.SetPropertyBlock(properties);
         }
 
+        private void OnDisable() => ShooterAudio.Loop(transform, SoundCue.GrenadeFuse, false);
+
         private void Detonate()
         {
             if (!active) return;
             active = false;
+            ShooterAudio.Loop(transform, SoundCue.GrenadeFuse, false);
+            ShooterAudio.Play(SoundCue.GrenadeExplosion, transform.position);
             Vector3 origin = transform.position;
             foreach (var target in HandProjectile.CollectBlastTargets(origin, explosion, hitMask))
             {

@@ -31,7 +31,7 @@ namespace HandShooter
         {
             if (Hand != null && !settings.grenadeEnabled && Hand.Mode == WeaponMode.Grenade) Hand.SetMode(WeaponMode.Ray);
         }
-        public void CycleMode() { NormalizeMode(); Hand.CycleMode(settings.grenadeEnabled); }
+        public void CycleMode() { NormalizeMode(); Hand.CycleMode(settings.grenadeEnabled); ShooterAudio.Ui(SoundCue.ModeChange); }
         public float CooldownRemaining => cooldownFraction * cooldownDuration;
         public float LastHitDamage { get; private set; }
         public float LastHitTime { get; private set; } = -100f;
@@ -150,9 +150,11 @@ namespace HandShooter
             UpdateHandVisuals();
             RequireTriggerRelease();
             gameObject.SetActive(true);
+            ShooterAudio.Local(SoundCue.HandEquip);
         }
         internal void AttachThumb()
         {
+            ShooterAudio.Local(SoundCue.ThumbEquip);
             Hand.ThumbUnlocked = true;
             Hand.ThumbActive = true;
             UpdateHandVisuals();
@@ -160,6 +162,7 @@ namespace HandShooter
         public bool SavePreset(int digit)
         {
             if (player.IsDead || !player.IsMenuOpen || player.IsPauseMenuOpen || !Presets.Save(digit, Hand)) return false;
+            ShooterAudio.Ui(SoundCue.PresetSave);
             PresetSaved?.Invoke(digit);
             return true;
         }
@@ -169,7 +172,9 @@ namespace HandShooter
                 Cursor.lockState != CursorLockMode.Locked) return false;
             HandPreset preset = Presets.Get(digit);
             // Only the hand changes: fuel, reload and cooldown progress are preserved.
-            return preset.IsSaved && Hand.TryApply(preset.ActiveMask, settings.ResolveMode(preset.Mode));
+            bool applied = preset.IsSaved && Hand.TryApply(preset.ActiveMask, settings.ResolveMode(preset.Mode));
+            if (applied) ShooterAudio.Ui(SoundCue.PresetEquip);
+            return applied;
         }
         private void UpdatePresetInput(Keyboard keyboard)
         {
@@ -203,13 +208,17 @@ namespace HandShooter
             if (!IsEquipped || cooldownFraction > 0f || IsReloading || player.IsMenuOpen || Time.timeScale == 0f) return false;
             ShotStats stats = Stats;
             float fuelCost = GetFuelCost(stats);
-            if (!HasFuelFor(fuelCost)) return false;
+            if (!HasFuelFor(fuelCost)) { ShooterAudio.Local(SoundCue.Empty); return false; }
+            float previousFuelFraction = FuelFraction;
             cooldownDuration = stats.Interval;
             cooldownFraction = 1f;
             Fuel = Mathf.Max(0f, Fuel - fuelCost);
             FuelChanged?.Invoke();
             int shotId = ++shotSequence;
             ShotFired?.Invoke(shotId, fuelCost);
+            ShooterAudio.Local(stats.Mode == WeaponMode.Grenade ? SoundCue.GrenadeThrow :
+                stats.Hitscan ? SoundCue.RayFire : SoundCue.ProjectileFire, 0.8f + Hand.ActiveCount * 0.15f);
+            if (previousFuelFraction > 0.2f && FuelFraction <= 0.2f) ShooterAudio.Local(SoundCue.FuelLow);
             recoil = 1f;
             Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
             int mask = settings.hitMask.value & ~4;
@@ -275,6 +284,7 @@ namespace HandShooter
                 if (!target)
                 {
                     end = hit.point;
+                    ShooterAudio.Play(SoundCue.WallHit, hit.point);
                     break;
                 }
                 if (damaged.Add(target)) Damage(target, damage, shotId);
@@ -287,6 +297,7 @@ namespace HandShooter
             SpareTankCount--;
             Fuel = tankCapacity;
             FuelChanged?.Invoke();
+            ShooterAudio.Local(SoundCue.ReloadEnd);
             Reloaded?.Invoke();
             return true;
         }
@@ -299,6 +310,8 @@ namespace HandShooter
         private System.Collections.IEnumerator ReloadFuelAnimation(float elapsed)
         {
             IsReloading = true;
+            if (elapsed <= 0f) ShooterAudio.Local(SoundCue.ReloadStart);
+            ShooterAudio.Loop(transform, SoundCue.ReloadLoop, true, 1f, 1f, true);
             float duration = Mathf.Max(0.1f, reloadDuration);
             activeReloadDuration = duration;
             reloadElapsed = elapsed;
@@ -313,6 +326,7 @@ namespace HandShooter
             transform.localPosition = handRestPosition;
             transform.localRotation = handRestRotation;
             IsReloading = false;
+            ShooterAudio.Loop(transform, SoundCue.ReloadLoop, false);
             ReloadFuel();
         }
 
@@ -353,10 +367,13 @@ namespace HandShooter
             FuelChanged?.Invoke();
         }
 
+        private void OnDisable() => ShooterAudio.Loop(transform, SoundCue.ReloadLoop, false);
+
         public void AddFuelTank(int count = 1)
         {
             if (count <= 0) return;
             SpareTankCount += count;
+            ShooterAudio.Local(SoundCue.TankPickup);
             FuelChanged?.Invoke();
         }
         public void Damage(Collider collider, float damage, int shotId = -1)

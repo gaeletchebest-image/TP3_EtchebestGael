@@ -45,11 +45,13 @@ namespace HandShooter
 
             if (requiredShots > 0 && shotCount != requiredShots)
             {
+                ShooterAudio.Ui(SoundCue.ChallengeFail);
                 target.SetRespawnDelay(1f);
                 return;
             }
 
             completed = true;
+            ShooterAudio.Ui(SoundCue.ChallengeSuccess);
             target.SetRespawnDelay(-1f);
             door.SetOpen(true);
         }

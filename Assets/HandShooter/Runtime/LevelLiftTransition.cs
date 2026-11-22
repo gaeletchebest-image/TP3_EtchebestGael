@@ -28,6 +28,8 @@ namespace HandShooter
         private long displayedCentiseconds = -1;
         private float? reloadAt;
         private bool loading;
+        private bool exitSoundPlayed;
+        private int lastAudioSecond = -1;
         private int departureSceneIndex;
         internal float SecondsRemaining => (float)secondsRemaining;
 
@@ -83,6 +85,8 @@ namespace HandShooter
 
             // Derive opacity from the lift poses so it also follows restored saves.
             float departureFade = departure.DescentProgress;
+            if (departureFade > 0f && !exitSoundPlayed)
+            { exitSoundPlayed = true; ShooterAudio.Ui(SoundCue.LevelExit); }
             UpdateCountdown(departureFade);
             float arrivalFade = arrival ? 1f - arrival.DescentProgress : 0f;
             float opacity = Mathf.Max(arrivalFade, departureFade);
@@ -119,6 +123,9 @@ namespace HandShooter
                 return;
             }
 
+            int second = (int)System.Math.Ceiling(secondsRemaining);
+            if (second <= 15 && second != lastAudioSecond && Time.timeScale > 0f)
+            { lastAudioSecond = second; ShooterAudio.Ui(SoundCue.TimerTick); }
             if (!countdown) return;
             long centiseconds = (long)(secondsRemaining * 100d);
             if (centiseconds == displayedCentiseconds) return;
