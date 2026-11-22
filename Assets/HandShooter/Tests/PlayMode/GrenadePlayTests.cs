@@ -224,13 +224,15 @@ namespace HandShooter.Tests
             Assert.That(grenade.FuseRemaining, Is.EqualTo(0.5f));
         }
 
-        [UnityTest] public IEnumerator ThumbButtonCyclesAndDisablingRemovesGrenadeWithoutResettingCooldown()
+        [UnityTest] public IEnumerator ModeButtonsSelectAndDisablingRemovesGrenadeWithoutResettingCooldown()
         {
             var menu = Object.FindFirstObjectByType<HandMenu>();
             player.SetMenuOpen(true);
             yield return null;
-            var button = menu.MenuRoot.transform.Find("Hand Menu Panel/Thumb Button").GetComponent<Button>();
-            button.onClick.Invoke(); Assert.That(weapon.Stats.Mode, Is.EqualTo(WeaponMode.Projectile));
+            var panel = menu.MenuRoot.transform.Find("Hand Menu Panel");
+            panel.Find("Mode Button 2").GetComponent<Button>().onClick.Invoke();
+            Assert.That(weapon.Stats.Mode, Is.EqualTo(WeaponMode.Projectile));
+            var button = panel.Find("Mode Button 3").GetComponent<Button>();
             button.onClick.Invoke(); Assert.That(weapon.Stats.Mode, Is.EqualTo(WeaponMode.Grenade));
             yield return null;
             Assert.That(button.GetComponentInChildren<Text>().text, Does.Contain("GRANADA"));

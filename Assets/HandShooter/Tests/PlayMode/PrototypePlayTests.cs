@@ -56,20 +56,15 @@ namespace HandShooter.Tests
             Assert.That(menu.MenuRoot.activeSelf, Is.True);
             Assert.That(Time.timeScale, Is.Zero);
             Assert.That(weapon.TryFire(), Is.False);
-            var rules = menu.MenuRoot.transform.Find("Hand Menu Panel/Rules Text").GetComponent<Text>();
-            Assert.That(rules.text, Does.Contain($"daño ×{1.5f:0.##}"));
-            weapon.Hand.ThumbActive = false;
+            var panel = menu.MenuRoot.transform.Find("Hand Menu Panel");
+            panel.Find("Mode Button 2").GetComponent<Button>().onClick.Invoke();
+            Assert.That(weapon.Stats.Mode, Is.EqualTo(WeaponMode.Projectile));
+            panel.Find("Power Segment 2").GetComponent<Button>().onClick.Invoke();
+            Assert.That(weapon.PowerLevel, Is.EqualTo(2));
             yield return null;
-            var thumb = menu.MenuRoot.transform.Find("Hand Menu Panel/Thumb Button/Thumb Label").GetComponent<Text>();
-            Assert.That(thumb.text, Does.Contain($"daño ×{1.5f:0.##}"));
-            var middle = menu.MenuRoot.transform.Find("Hand Menu Panel/Finger Button 2").GetComponent<Button>();
-            Assert.That(middle.interactable, Is.True);
-            middle.onClick.Invoke();
-            Assert.That(weapon.Hand.ActiveCount, Is.EqualTo(2));
-            yield return null;
-            var index = menu.MenuRoot.transform.Find("Hand Menu Panel/Finger Button 1").GetComponent<Button>();
-            index.onClick.Invoke();
-            Assert.That(weapon.Hand.ActiveMask, Is.EqualTo(2));
+            Assert.That(panel.Find("Power Label").GetComponent<Text>().text, Does.Contain("2 / 4"));
+            panel.Find("Power Segment 1").GetComponent<Button>().onClick.Invoke();
+            Assert.That(weapon.PowerLevel, Is.EqualTo(1));
             player.SetMenuOpen(false);
             Assert.That(Time.timeScale, Is.EqualTo(1));
         }

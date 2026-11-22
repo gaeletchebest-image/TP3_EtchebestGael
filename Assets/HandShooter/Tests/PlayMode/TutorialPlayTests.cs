@@ -91,7 +91,7 @@ namespace HandShooter.Tests
             var menu = Object.FindFirstObjectByType<HandMenu>();
             player.SetMenuOpen(true);
             yield return null;
-            var button = menu.MenuRoot.transform.Find("Hand Menu Panel/Thumb Button").GetComponent<Button>();
+            var button = menu.MenuRoot.transform.Find("Hand Menu Panel/Mode Button 2").GetComponent<Button>();
             Assert.That(button.interactable, Is.False);
             Assert.That(menu.tankLabel.text, Does.Contain("INFINITO"));
             player.SetMenuOpen(false);

@@ -22,7 +22,7 @@ namespace HandShooter.Editor
             {
                 if (EditorApplication.isPlayingOrWillChangePlaymode || SceneManager.GetActiveScene().path != ScenePath) return;
                 var scene = SceneManager.GetActiveScene();
-                EnsureWeaponPresetMenu();
+                EnsureWeaponMenu();
                 EnsureKamikaze();
                 SniperSetup.EnsureSniper();
                 HunterSetup.EnsureHunter();
@@ -51,7 +51,7 @@ namespace HandShooter.Editor
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath))
             {
                 var existingScene = EditorSceneManager.OpenScene(ScenePath);
-                EnsureWeaponPresetMenu();
+                EnsureWeaponMenu();
                 EnsureFuelPickups();
                 EnsureTurret();
                 EnsureKamikaze();
@@ -448,73 +448,92 @@ namespace HandShooter.Editor
             menu.dashCooldownFill = dashFill.GetComponent<Image>();
             menu.fuelLabel = UiText("Fuel Label", canvas.transform, "COMBUSTIBLE", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(360f, 28f), 20, mint, TextAnchor.MiddleCenter);
             menu.tankLabel = UiText("Tank Label", canvas.transform, "100/100   ·   TANQUES ×2", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -76f), new Vector2(420f, 28f), 16, ink, TextAnchor.MiddleCenter);
-            menu.debugPanel = UiImage("Debug Panel", canvas.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(26f, 26f), new Vector2(460f, 116f), new Color(0.03f, 0.07f, 0.09f, 0.94f));
+            menu.debugPanel = UiImage("Debug Panel", canvas.transform, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(26f, 212f), new Vector2(460f, 116f), new Color(0.03f, 0.07f, 0.09f, 0.94f));
             menu.debugText = UiText("Debug Text", menu.debugPanel.transform, "", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 16, ink, TextAnchor.UpperLeft);
             RectTransform debugRect = menu.debugText.rectTransform; debugRect.offsetMin = new Vector2(16f, 12f); debugRect.offsetMax = new Vector2(-16f, -12f);
             menu.debugPanel.SetActive(false);
-            menu.controls = UiText("Controls", canvas.transform, "", Vector2.right, Vector2.right, Vector2.one, new Vector2(-26f, 28f), new Vector2(850f, 26f), 13, muted, TextAnchor.MiddleRight);
+            menu.controls = UiText("Controls", canvas.transform, "", Vector2.right, Vector2.right, Vector2.one, new Vector2(-26f, 20f), new Vector2(1280f, 44f), 13, muted, TextAnchor.MiddleRight);
             menu.crosshair = UiText("Crosshair", canvas.transform, "+", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(32f, 32f), 25, mint, TextAnchor.MiddleCenter);
             menu.hitText = UiText("Hit Feedback", canvas.transform, "", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -48f), new Vector2(240f, 45f), 19, orange, TextAnchor.MiddleCenter);
             CreateSceneHandMenu(canvas.transform, ink, muted, mint, orange);
         }
         private static void CreateSceneHandMenu(Transform canvas, Color ink, Color muted, Color mint, Color orange)
         {
-            var overlay = UiImage("Hand Menu Overlay", canvas, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.015f, 0.03f, 0.045f, 0.86f));
-            var panel = UiImage("Hand Menu Panel", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 650f), new Color(0.045f, 0.075f, 0.095f, 1f));
-            UiImage("Menu Accent", panel.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, new Vector2(980f, 3f), mint);
-            UiText("Menu Title", panel.transform, "CONFIGURAR MANO", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(34f, -28f), new Vector2(700f, 42f), 32, ink, TextAnchor.UpperLeft);
-            UiText("Menu Subtitle", panel.transform, "Juntá los dedos para ganar potencia. Liberalos para disparar más rápido.", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -78f), new Vector2(900f, 30f), 17, muted, TextAnchor.UpperLeft);
-            UiText("Finger Section Label", panel.transform, "01 / DEDOS PRINCIPALES", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -135f), new Vector2(420f, 30f), 15, mint, TextAnchor.UpperLeft);
-            UiText("Result Section Label", panel.transform, "02 / RESULTADO", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -135f), new Vector2(400f, 30f), 15, mint, TextAnchor.UpperLeft);
-            string[] names = { "ÍNDICE", "MEDIO", "ANULAR", "MEÑIQUE" };
-            float[] heights = { 158f, 188f, 170f, 128f };
-            for (int i = 0; i < names.Length; i++)
-                UiButton($"Finger Button {i + 1}", $"Finger Label {i + 1}", panel.transform, new Vector2(72f + i * 92f, -(372f - heights[i])), new Vector2(82f, heights[i]), new Color(0.13f, 0.24f, 0.26f), $"{i + 1:00}\n\n{names[i]}\n\nACTIVO", 12, ink);
-            var palm = UiImage("Palm", panel.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(66f, -380f), new Vector2(374f, 86f), new Color(0.09f, 0.16f, 0.18f));
-            var palmText = UiText("Palm Label", palm.transform, "", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 19, ink, TextAnchor.MiddleCenter);
-            palmText.rectTransform.offsetMin = new Vector2(20f, 12f); palmText.rectTransform.offsetMax = new Vector2(-20f, -12f);
-            UiButton("Thumb Button", "Thumb Label", panel.transform, new Vector2(66f, -482f), new Vector2(374f, 72f), mint, "PULGAR", 17, new Color(0.025f, 0.07f, 0.08f));
-            UiText("Menu Mode", panel.transform, "RAYCAST / INSTANTÁNEO", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -184f), new Vector2(410f, 40f), 26, mint, TextAnchor.UpperLeft);
-            UiText("Menu Stats", panel.transform, "", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -240f), new Vector2(410f, 150f), 20, ink, TextAnchor.UpperLeft);
-            UiText("Rules Header", panel.transform, "REGLAS DE LA MANO", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -405f), new Vector2(410f, 25f), 13, mint, TextAnchor.UpperLeft);
-            UiText("Rules Text", panel.transform, "", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(526f, -441f), new Vector2(415f, 102f), 15, muted, TextAnchor.UpperLeft);
-            UiText("Menu Footer", panel.transform, "Los botones atenuados romperían el grupo activo.", new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -574f), new Vector2(460f, 42f), 13, muted, TextAnchor.UpperLeft);
-            UiButton("Resume Button", "Resume Label", panel.transform, new Vector2(526f, -574f), new Vector2(410f, 44f), new Color(0.13f, 0.24f, 0.26f), "VOLVER A DISPARAR", 16, ink);
-            CreatePresetControls(panel.transform, ink, muted, mint);
+            var overlay = UiImage("Hand Menu Overlay", canvas, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.015f, 0.03f, 0.045f, 0.9f));
+            var panel = UiImage("Hand Menu Panel", overlay.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 620f), new Color(0.045f, 0.075f, 0.095f, 1f));
+            UiImage("Menu Accent", panel.transform, Vector2.up, Vector2.up, Vector2.up, Vector2.zero, new Vector2(980f, 3f), mint);
+            MenuText("Menu Title", "CONFIGURAR ARMA", panel.transform, 36, 28, 900, 42, 32, ink);
+            MenuText("Menu Subtitle", "Ajustá la potencia y elegí el tipo de disparo.", panel.transform, 36, 80, 900, 28, 17, muted);
+            MenuText("Power Section Label", "01 / POTENCIA", panel.transform, 36, 136, 410, 26, 15, mint);
+            MenuText("Power Label", "NIVEL 1 / 4", panel.transform, 36, 180, 410, 30, 24, ink);
+            for (int i = 0; i < 4; i++)
+                UiButton($"Power Segment {i + 1}", $"Power Number {i + 1}", panel.transform,
+                    new Vector2(36f + i * 104f, -226f), new Vector2(96f, 52f),
+                    i == 0 ? mint : new Color(0.13f, 0.2f, 0.23f), (i + 1).ToString(), 19,
+                    i == 0 ? new Color(0.02f, 0.09f, 0.08f) : ink);
+            MenuText("Power Hint", "RUEDA DEL MOUSE  /  CLIC EN EL MEDIDOR", panel.transform, 36, 294, 410, 24, 12, muted);
+            MenuText("Mode Section Label", "02 / TIPO DE DISPARO", panel.transform, 36, 358, 410, 26, 15, mint);
+            string[] modes = { "RAYO", "PROYECTIL", "GRANADA" };
+            for (int i = 0; i < 3; i++)
+                UiButton($"Mode Button {i + 1}", $"Mode Label {i + 1}", panel.transform,
+                    new Vector2(36f + i * 140f, -404f), new Vector2(132f, 84f),
+                    i == 0 ? mint : new Color(0.13f, 0.2f, 0.23f), $"[{i + 1}]  {modes[i]}\n{(i == 0 ? "ACTIVO" : "INACTIVO")}", 14,
+                    i == 0 ? new Color(0.02f, 0.09f, 0.08f) : ink);
+            MenuText("Mode Hint", "TECLAS 1 / 2 / 3  /  CLIC PARA SELECCIONAR", panel.transform, 36, 506, 420, 24, 12, muted);
+            UiImage("Menu Divider", panel.transform, Vector2.up, Vector2.up, Vector2.up, new Vector2(490f, -136f), new Vector2(1f, 398f), new Color(0.13f, 0.2f, 0.23f));
+            MenuText("Result Section Label", "RESULTADO", panel.transform, 526, 136, 410, 26, 15, mint);
+            MenuText("Menu Mode", "RAYO / INSTANTÁNEO", panel.transform, 526, 184, 410, 34, 24, mint);
+            MenuText("Menu Stats", "", panel.transform, 526, 242, 410, 202, 18, ink);
+            MenuText("Rules Text", "", panel.transform, 526, 452, 410, 90, 14, muted);
+            MenuText("Menu Footer", "Los atajos también funcionan durante la partida.", panel.transform, 36, 566, 460, 30, 13, muted);
+            UiButton("Resume Button", "Resume Label", panel.transform, new Vector2(526f, -558f), new Vector2(410f, 40f), new Color(0.13f, 0.24f, 0.26f), "VOLVER A DISPARAR", 16, ink);
+            CreateWeaponStatus(canvas, ink, muted, mint);
             overlay.SetActive(false);
         }
-        public static void EnsureWeaponPresetMenu()
+        private static void MenuText(string name, string value, Transform parent, float x, float y,
+            float width, float height, int fontSize, Color color)
         {
-            var menu = Object.FindFirstObjectByType<HandMenu>();
-            if (!menu || !menu.canvas) return;
-            Transform panel = menu.canvas.transform.Find("Hand Menu Overlay/Hand Menu Panel");
-            if (!panel || panel.Find("Preset Section Label")) return;
-            CreatePresetControls(panel, new Color(0.9f, 0.95f, 0.97f),
-                new Color(0.53f, 0.64f, 0.69f), new Color(0.27f, 0.93f, 0.75f));
-            EditorSceneManager.MarkSceneDirty(menu.gameObject.scene);
+            Text text = UiText(name, parent, value, Vector2.up, Vector2.up, Vector2.up,
+                new Vector2(x, -y), new Vector2(width, height), fontSize, color, TextAnchor.UpperLeft);
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
         }
-        private static void CreatePresetControls(Transform panel, Color ink, Color muted, Color mint)
+        private static void CreateWeaponStatus(Transform canvas, Color ink, Color muted, Color mint)
         {
-            panel.GetComponent<RectTransform>().sizeDelta = new Vector2(980f, 740f);
-            UiText("Preset Section Label", panel,
-                "03 / GUARDAR CONFIGURACIÓN · Clic o tecla 1–9 / 0 para guardar o reemplazar",
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(36f, -568f), new Vector2(900f, 24f), 14, mint, TextAnchor.UpperLeft);
-            for (int i = 0; i < HandPresetStore.SlotCount; i++)
+            var hud = UiImage("Weapon Status", canvas, Vector2.up, Vector2.up, Vector2.up,
+                new Vector2(26f, -26f), new Vector2(386f, 124f), new Color(0.03f, 0.07f, 0.09f, 0.94f));
+            MenuText("Power Label", "POTENCIA 1/4  ·  RUEDA", hud.transform, 16, 12, 350, 24, 14, ink);
+            for (int i = 0; i < 4; i++)
+                UiImage($"Power Segment {i + 1}", hud.transform, Vector2.up, Vector2.up, Vector2.up,
+                    new Vector2(16f + i * 90f, -42f), new Vector2(84f, 12f), i == 0 ? mint : new Color(0.13f, 0.2f, 0.23f));
+            string[] names = { "RAYO", "PROYECTIL", "GRANADA" };
+            for (int i = 0; i < 3; i++)
             {
-                int digit = (i + 1) % HandPresetStore.SlotCount;
-                UiButton($"Preset Button {digit}", $"Preset Label {digit}", panel,
-                    new Vector2(36f + i * 90f, -602f), new Vector2(84f, 52f),
-                    new Color(0.13f, 0.2f, 0.23f), $"[{digit}]\nVACÍO", 11, ink);
+                var pill = UiImage($"Mode {i + 1}", hud.transform, Vector2.up, Vector2.up, Vector2.up,
+                    new Vector2(16f + i * 120f, -72f), new Vector2(114f, 34f), i == 0 ? mint : new Color(0.13f, 0.2f, 0.23f));
+                UiText("Label", pill.transform, $"{i + 1} {names[i]}", Vector2.zero, Vector2.one,
+                    new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, 12, i == 0 ? new Color(0.02f, 0.09f, 0.08f) : ink, TextAnchor.MiddleCenter);
             }
-            Text footer = panel.Find("Menu Footer").GetComponent<Text>();
-            footer.rectTransform.anchoredPosition = new Vector2(36f, -672f);
-            footer.rectTransform.sizeDelta = new Vector2(460f, 42f);
-            footer.fontSize = 12;
-            footer.color = muted;
-            footer.horizontalOverflow = HorizontalWrapMode.Wrap;
-            footer.text = "Se conservan al reiniciar. En partida: 1–9 / 0 para cambiar.";
-            panel.Find("Resume Button").GetComponent<RectTransform>().anchoredPosition = new Vector2(526f, -672f);
+        }
+        public static void EnsureWeaponMenu()
+        {
+            foreach (var menu in Object.FindObjectsByType<HandMenu>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (!menu.canvas) continue;
+                Transform overlay = menu.canvas.transform.Find("Hand Menu Overlay");
+                if (overlay && overlay.Find("Hand Menu Panel/Power Label") && menu.canvas.transform.Find("Weapon Status")) continue;
+                if (overlay) Object.DestroyImmediate(overlay.gameObject);
+                Transform status = menu.canvas.transform.Find("Weapon Status");
+                if (status) Object.DestroyImmediate(status.gameObject);
+                CreateSceneHandMenu(menu.canvas.transform, new Color(0.9f, 0.95f, 0.97f),
+                    new Color(0.53f, 0.64f, 0.69f), new Color(0.27f, 0.93f, 0.75f), new Color(1f, 0.59f, 0.31f));
+                if (menu.controls)
+                {
+                    menu.controls.rectTransform.sizeDelta = new Vector2(1280f, 44f);
+                    menu.controls.rectTransform.anchoredPosition = new Vector2(-26f, 20f);
+                }
+                if (menu.debugPanel) menu.debugPanel.GetComponent<RectTransform>().anchoredPosition = new Vector2(26f, 212f);
+                EditorSceneManager.MarkSceneDirty(menu.gameObject.scene);
+            }
         }
         private static void UiButton(string name, string labelName, Transform parent, Vector2 position, Vector2 size, Color background, string label, int fontSize, Color textColor)
         {

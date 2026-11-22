@@ -22,7 +22,7 @@ namespace HandShooter
         [SerializeField] private bool startsWithoutThumb;
         public bool IsEquipped => gameObject.activeSelf;
         public HandConfiguration Hand { get; private set; }
-        public HandPresetStore Presets { get; private set; }
+        public int PowerLevel => Hand.ActiveCount;
         public ShotStats Stats
         {
             get { NormalizeMode(); return settings.Evaluate(Hand); }
@@ -56,7 +56,6 @@ namespace HandShooter
         private bool HasFuelFor(float cost) => Fuel + 0.0001f >= cost;
         public event Action<float> Hit;
         public event Action FuelChanged;
-        public event Action<int> PresetSaved;
         public event Action<int, float> ShotFired;
         public event Action<int, DamageTarget, float, bool> DamageDealt;
         public event Action Reloaded;
@@ -78,7 +77,6 @@ namespace HandShooter
             {
                 ThumbUnlocked = !startsWithoutThumb
             };
-            Presets = new HandPresetStore();
             Fuel = tankCapacity;
             SpareTankCount = startingSpareTanks;
             handRestPosition = transform.localPosition;
@@ -159,45 +157,52 @@ namespace HandShooter
             Hand.ThumbActive = true;
             UpdateHandVisuals();
         }
-        public bool SavePreset(int digit)
+        private bool CanConfigure => IsEquipped && !player.IsDead && !player.IsPauseMenuOpen &&
+            !player.IsLoadingSave && (player.IsMenuOpen ||
+                (Time.timeScale > 0f && Cursor.lockState == CursorLockMode.Locked));
+        public bool IsModeAvailable(WeaponMode mode) => mode >= WeaponMode.Ray && mode <= WeaponMode.Grenade &&
+            (mode == WeaponMode.Ray || Hand.ThumbUnlocked) && (mode != WeaponMode.Grenade || settings.grenadeEnabled);
+        public bool SetPowerLevel(int level)
         {
-            if (player.IsDead || !player.IsMenuOpen || player.IsPauseMenuOpen || !Presets.Save(digit, Hand)) return false;
-            ShooterAudio.Ui(SoundCue.PresetSave);
-            PresetSaved?.Invoke(digit);
+            if (!CanConfigure) return false;
+            level = Mathf.Clamp(level, 1, 4);
+            if (level == PowerLevel) return false;
+            // Keep the existing damage/cooldown rules and saved-hand format.
+            Hand.TryApply((1 << level) - 1, Hand.Mode);
+            ShooterAudio.Ui(SoundCue.FingerToggle);
             return true;
         }
-        public bool TryEquipPreset(int digit)
+        public bool SelectMode(WeaponMode mode)
         {
-            if (player.IsDead || player.IsMenuOpen || Time.timeScale <= 0f ||
-                Cursor.lockState != CursorLockMode.Locked) return false;
-            HandPreset preset = Presets.Get(digit);
-            // Only the hand changes: fuel, reload and cooldown progress are preserved.
-            bool applied = preset.IsSaved && Hand.TryApply(preset.ActiveMask, settings.ResolveMode(preset.Mode));
-            if (applied) ShooterAudio.Ui(SoundCue.PresetEquip);
-            return applied;
+            if (!CanConfigure || !IsModeAvailable(mode) || Stats.Mode == mode) return false;
+            Hand.SetMode(mode);
+            ShooterAudio.Ui(SoundCue.ModeChange);
+            return true;
         }
-        private void UpdatePresetInput(Keyboard keyboard)
+        private void UpdateConfigurationInput(Keyboard keyboard, Mouse mouse)
         {
-            if (keyboard == null || player.IsDead) return;
-            for (int digit = 0; digit < HandPresetStore.SlotCount; digit++)
+            if (!CanConfigure) return;
+            float scroll = mouse != null ? mouse.scroll.ReadValue().y : 0f;
+            if (scroll != 0f) SetPowerLevel(PowerLevel + (scroll > 0f ? 1 : -1));
+            if (keyboard == null) return;
+            for (int index = 0; index < 3; index++)
             {
-                Key topRow = digit == 0 ? Key.Digit0 : (Key)((int)Key.Digit1 + digit - 1);
-                Key numpad = (Key)((int)Key.Numpad0 + digit);
+                Key topRow = (Key)((int)Key.Digit1 + index);
+                Key numpad = (Key)((int)Key.Numpad1 + index);
                 if (!keyboard[topRow].wasPressedThisFrame && !keyboard[numpad].wasPressedThisFrame) continue;
-                if (player.IsMenuOpen) SavePreset(digit);
-                else TryEquipPreset(digit);
+                SelectMode((WeaponMode)index);
             }
         }
         private void Update()
         {
             var keyboard = Keyboard.current;
-            UpdatePresetInput(keyboard);
+            var mouse = Mouse.current;
+            UpdateConfigurationInput(keyboard, mouse);
             if (cooldownFraction > 0f)
                 cooldownFraction = Mathf.Max(0f, cooldownFraction - Time.deltaTime / cooldownDuration);
             UpdateHandVisuals();
             if (keyboard != null && keyboard.rKey.wasPressedThisFrame && !player.IsMenuOpen && Cursor.lockState == CursorLockMode.Locked)
                 BeginReloadFuel();
-            var mouse = Mouse.current;
             if (mouse == null) return;
             if (!mouse.leftButton.isPressed) requireRelease = false;
             if (player.IsMenuOpen || Cursor.lockState != CursorLockMode.Locked || requireRelease) return;
