@@ -38,7 +38,7 @@ namespace HandShooter
         {
             public float fuel, cooldown, cooldownDuration, reloadElapsed;
             public int spareTanks, mask;
-            public bool thumb, reloading, unequipped, thumbUnlocked;
+            public bool thumb, grenade, reloading, unequipped, thumbUnlocked;
         }
 
         [Serializable]

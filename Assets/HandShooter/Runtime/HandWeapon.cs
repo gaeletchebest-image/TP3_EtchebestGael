@@ -23,7 +23,15 @@ namespace HandShooter
         public bool IsEquipped => gameObject.activeSelf;
         public HandConfiguration Hand { get; private set; }
         public HandPresetStore Presets { get; private set; }
-        public ShotStats Stats => settings.Evaluate(Hand);
+        public ShotStats Stats
+        {
+            get { NormalizeMode(); return settings.Evaluate(Hand); }
+        }
+        private void NormalizeMode()
+        {
+            if (Hand != null && !settings.grenadeEnabled && Hand.Mode == WeaponMode.Grenade) Hand.SetMode(WeaponMode.Ray);
+        }
+        public void CycleMode() { NormalizeMode(); Hand.CycleMode(settings.grenadeEnabled); }
         public float CooldownRemaining => cooldownFraction * cooldownDuration;
         public float LastHitDamage { get; private set; }
         public float LastHitTime { get; private set; } = -100f;
@@ -161,7 +169,7 @@ namespace HandShooter
                 Cursor.lockState != CursorLockMode.Locked) return false;
             HandPreset preset = Presets.Get(digit);
             // Only the hand changes: fuel, reload and cooldown progress are preserved.
-            return preset.IsSaved && Hand.TryApply(preset.ActiveMask, preset.ThumbActive);
+            return preset.IsSaved && Hand.TryApply(preset.ActiveMask, settings.ResolveMode(preset.Mode));
         }
         private void UpdatePresetInput(Keyboard keyboard)
         {
@@ -210,6 +218,13 @@ namespace HandShooter
             if (Physics.Raycast(ray, out RaycastHit aimHit, range, mask, QueryTriggerInteraction.Ignore)) aimPoint = aimHit.point;
             Vector3 start = muzzle.position;
             Vector3 direction = (aimPoint - start).normalized;
+            if (stats.Mode == WeaponMode.Grenade)
+            {
+                // If the muzzle is through a wall, launch on the player's side of it.
+                if (Physics.Linecast(ray.origin, start, out _, mask, QueryTriggerInteraction.Ignore)) start = ray.origin;
+                HandGrenade.Spawn(start, direction, stats.Damage, settings, this, shotId);
+                return true;
+            }
             if (stats.Hitscan)
             {
                 Vector3 muzzleOffset = start - ray.origin;
@@ -301,19 +316,24 @@ namespace HandShooter
             ReloadFuel();
         }
 
-        internal SavedGame.Weapon CaptureState() => new SavedGame.Weapon
+        internal SavedGame.Weapon CaptureState()
         {
-            fuel = Fuel, spareTanks = SpareTankCount, mask = Hand.ActiveMask, thumb = Hand.ThumbActive,
-            cooldown = cooldownFraction, cooldownDuration = cooldownDuration,
-            reloading = IsReloading, reloadElapsed = reloadElapsed,
-            unequipped = !IsEquipped, thumbUnlocked = Hand.ThumbUnlocked
-        };
+            NormalizeMode();
+            return new SavedGame.Weapon
+            {
+                fuel = Fuel, spareTanks = SpareTankCount, mask = Hand.ActiveMask, thumb = Hand.ThumbActive,
+                grenade = Hand.Mode == WeaponMode.Grenade,
+                cooldown = cooldownFraction, cooldownDuration = cooldownDuration,
+                reloading = IsReloading, reloadElapsed = reloadElapsed,
+                unequipped = !IsEquipped, thumbUnlocked = Hand.ThumbUnlocked
+            };
+        }
 
         internal void RestoreState(SavedGame.Weapon state)
         {
             if (ActiveRefuelingStation) ActiveRefuelingStation.CancelFill(false);
             Hand.ThumbUnlocked = !startsWithoutThumb || state.thumbUnlocked;
-            Hand.TryApply(state.mask, state.thumb);
+            Hand.TryApply(state.mask, settings.ResolveMode(state.grenade ? WeaponMode.Grenade : state.thumb ? WeaponMode.Ray : WeaponMode.Projectile));
             Fuel = Mathf.Clamp(state.fuel, 0f, tankCapacity);
             SpareTankCount = Mathf.Max(0, state.spareTanks);
             cooldownFraction = Mathf.Clamp01(state.cooldown);

@@ -1,5 +1,13 @@
 # Hand Shooter — prototipo
 
+## Granada opcional
+
+El botón que antes alternaba el pulgar ahora recorre **Rayo → Proyectil → Granada**. La potencia sigue usando el grupo de cañones activo. La granada sale con una trayectoria con gravedad, cae y queda quieta al tocar el suelo; **recién entonces empieza una mecha fija de 2 segundos**. Chocar con una pared o un enemigo no la detona ni inicia la mecha. La pausa detiene tanto el vuelo como la mecha. Un anillo violeta muestra su radio mientras espera; la explosión respeta la cobertura y daña una sola vez a cada enemigo, sin daño directo adicional.
+
+Para quitar por completo la opción del selector, desmarcar **Grenade Enabled** en `Assets/HandShooter/Settings/ShooterSettings.asset`, sección **Granada opcional**. Si estaba seleccionada (también al cargar un preset o partida), el arma vuelve al rayo y conserva combustible, recarga y espera. No hace falta cambiar escenas ni prefabs.
+
+Los valores iniciales son daño ×3, consumo ×3 respecto al rayo de la misma potencia, espera ×4 y radio ×3 respecto a la explosión del proyectil de esa potencia. Así, con 1/2/3/4 cañones activos, el daño y consumo son 3/6/12/24, la espera es 0.8/1.6/2.6/4 s y el radio es aproximadamente 2.65/3.75/5.30/7.50 m. La mecha sigue siendo de 2 s en todos los casos. `grenadeFuseDuration` permite cambiar esa demora fija; los otros campos ajustan multiplicadores, lanzamiento, gravedad, tamaño y color. Cada granada conserva los ajustes de su lanzamiento. Los presets y las partidas guardan el tercer modo y siguen admitiendo los guardados anteriores.
+
 ## Defensa de enemigos
 
 Cada enemigo tiene `initialDefensePoints` (puntos iniciales, mínimo 0) y `defenseBarCapacity` (disparos por punto, mínimo 1) en su asset de ajustes y en **Laboratorio de balance > Ajustes > enemigo > Defensa**. Solo el sniper y la torreta empiezan con **1 punto y barra de 3 impactos**. El hunter, el kamikaze y los blancos no tienen defensa y no muestran contador ni barra de defensa. Los perfiles anteriores conservan su balance sin defensa hasta configurarlos.

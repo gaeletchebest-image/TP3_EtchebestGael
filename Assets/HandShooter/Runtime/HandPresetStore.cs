@@ -5,12 +5,15 @@ namespace HandShooter
     public readonly struct HandPreset
     {
         public readonly int ActiveMask;
-        public readonly bool ThumbActive;
+        public readonly WeaponMode Mode;
+        public bool ThumbActive => Mode == WeaponMode.Ray;
         public bool IsSaved => HandConfiguration.IsValidMask(ActiveMask);
         public HandPreset(int activeMask, bool thumbActive)
-        { ActiveMask = activeMask; ThumbActive = thumbActive; }
+            : this(activeMask, thumbActive ? WeaponMode.Ray : WeaponMode.Projectile) { }
+        public HandPreset(int activeMask, WeaponMode mode)
+        { ActiveMask = activeMask; Mode = mode; }
         public bool Matches(HandConfiguration hand) => IsSaved && hand != null &&
-            hand.ActiveMask == ActiveMask && (!hand.ThumbUnlocked || hand.ThumbActive == ThumbActive);
+            hand.ActiveMask == ActiveMask && (!hand.ThumbUnlocked || hand.Mode == Mode);
     }
 
     public sealed class HandPresetStore
@@ -26,8 +29,9 @@ namespace HandShooter
             {
                 int encoded = PlayerPrefs.GetInt(keyPrefix + digit, 0);
                 int mask = encoded & 15;
-                if ((encoded & ~31) == 0 && HandConfiguration.IsValidMask(mask))
-                    slots[digit] = new HandPreset(mask, (encoded & 16) != 0);
+                if ((encoded & ~63) == 0 && (encoded & 48) != 48 && HandConfiguration.IsValidMask(mask))
+                    slots[digit] = new HandPreset(mask, (encoded & 32) != 0 ? WeaponMode.Grenade :
+                        (encoded & 16) != 0 ? WeaponMode.Ray : WeaponMode.Projectile);
             }
         }
 
@@ -36,8 +40,8 @@ namespace HandShooter
         public bool Save(int digit, HandConfiguration hand)
         {
             if (digit < 0 || digit >= SlotCount || hand == null) return false;
-            slots[digit] = new HandPreset(hand.ActiveMask, hand.ThumbActive);
-            PlayerPrefs.SetInt(keyPrefix + digit, hand.ActiveMask | (hand.ThumbActive ? 16 : 0));
+            slots[digit] = new HandPreset(hand.ActiveMask, hand.Mode);
+            PlayerPrefs.SetInt(keyPrefix + digit, hand.ActiveMask | (hand.Mode == WeaponMode.Grenade ? 32 : hand.ThumbActive ? 16 : 0));
             PlayerPrefs.Save();
             return true;
         }

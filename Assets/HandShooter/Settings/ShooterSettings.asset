@@ -34,6 +34,17 @@ MonoBehaviour:
   explosionMaxRadius: 4
   explosionVisualDuration: 0.35
   explosionColor: {r: 1, g: 0.55, b: 0.15, a: 1}
+  grenadeEnabled: 1
+  grenadeDamageMultiplier: 3
+  grenadeCooldownMultiplier: 4
+  grenadeFuelMultiplier: 3
+  grenadeRadiusMultiplier: 3
+  grenadeFuseDuration: 2
+  grenadeLaunchSpeed: 10
+  grenadeUpwardSpeed: 3
+  grenadeGravity: 15
+  grenadeRadius: 0.14
+  grenadeColor: {r: 0.75, g: 0.35, b: 1, a: 1}
   range: 30
   hitMask:
     serializedVersion: 2

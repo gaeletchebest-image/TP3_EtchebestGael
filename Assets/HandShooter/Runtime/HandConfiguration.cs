@@ -3,16 +3,32 @@ using UnityEngine;
 
 namespace HandShooter
 {
+    public enum WeaponMode { Ray, Projectile, Grenade }
+
     [Serializable]
     public sealed class HandConfiguration
     {
         [SerializeField] private int activeMask = 1;
         [SerializeField] private bool thumbActive = true;
+        [SerializeField] private bool grenadeSelected;
+        public WeaponMode Mode => !ThumbUnlocked ? WeaponMode.Ray : grenadeSelected ? WeaponMode.Grenade :
+            thumbActive ? WeaponMode.Ray : WeaponMode.Projectile;
         public bool ThumbUnlocked { get; internal set; } = true;
         public bool ThumbActive
         {
             get => !ThumbUnlocked || thumbActive;
-            set { if (ThumbUnlocked) thumbActive = value; }
+            set { if (ThumbUnlocked) { thumbActive = value; grenadeSelected = false; } }
+        }
+        public void SetMode(WeaponMode mode)
+        {
+            if (!ThumbUnlocked || mode < WeaponMode.Ray || mode > WeaponMode.Grenade) return;
+            thumbActive = mode == WeaponMode.Ray;
+            grenadeSelected = mode == WeaponMode.Grenade;
+        }
+        public void CycleMode(bool grenadesEnabled)
+        {
+            SetMode(Mode == WeaponMode.Ray ? WeaponMode.Projectile :
+                Mode == WeaponMode.Projectile && grenadesEnabled ? WeaponMode.Grenade : WeaponMode.Ray);
         }
         public int ActiveMask => IsValidMask(activeMask) ? activeMask : 1;
         public int ActiveCount
@@ -34,6 +50,13 @@ namespace HandShooter
             if (!IsValidMask(mask)) return false;
             activeMask = mask;
             ThumbActive = thumb;
+            return true;
+        }
+        public bool TryApply(int mask, WeaponMode mode)
+        {
+            if (!IsValidMask(mask) || mode < WeaponMode.Ray || mode > WeaponMode.Grenade) return false;
+            activeMask = mask;
+            SetMode(mode);
             return true;
         }
         public static bool IsValidMask(int mask)

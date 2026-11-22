@@ -34,6 +34,22 @@ namespace HandShooter
         [Min(0f)] public float explosionMaxRadius = 4f;
         [Min(0.05f)] public float explosionVisualDuration = 0.35f;
         public Color explosionColor = new Color(1f, 0.55f, 0.15f, 1f);
+        [Header("Granada opcional")]
+        [Tooltip("Desactivar para quitar la granada del selector y volver a rayo/proyectil.")]
+        public bool grenadeEnabled = true;
+        [Min(0.01f)] public float grenadeDamageMultiplier = 3f;
+        [Min(0.01f)] public float grenadeCooldownMultiplier = 4f;
+        [Tooltip("Costo respecto al rayo de la misma potencia. Siempre mayor que 1.")]
+        [Min(1.01f)] public float grenadeFuelMultiplier = 3f;
+        [Tooltip("Radio respecto a la explosión del proyectil de la misma potencia.")]
+        [Min(1.01f)] public float grenadeRadiusMultiplier = 3f;
+        [Tooltip("Demora fija desde que toca el suelo, independiente de la potencia.")]
+        [Min(0.05f)] public float grenadeFuseDuration = 2f;
+        [Min(0.1f)] public float grenadeLaunchSpeed = 10f;
+        [Min(0f)] public float grenadeUpwardSpeed = 3f;
+        [Min(0.1f)] public float grenadeGravity = 15f;
+        [Min(0.01f)] public float grenadeRadius = 0.14f;
+        public Color grenadeColor = new Color(0.75f, 0.35f, 1f);
         [Header("Disparo")]
         [Tooltip("Alcance del rayo en metros.")]
         [Min(1f)] public float range = 100f;
@@ -71,17 +87,29 @@ namespace HandShooter
             float interval = cooldownByInactiveFingers != null && cooldownByInactiveFingers.Length > inactive
                 ? cooldownByInactiveFingers[inactive] : 1f / (inactive + 1);
             float damage = Mathf.Max(0.01f, baseDamage) * Mathf.Pow(Mathf.Max(1f, additionalFingerMultiplier), hand.ActiveCount - 1);
-            if (!hand.ThumbActive)
+            WeaponMode mode = ResolveMode(hand.Mode);
+            if (mode == WeaponMode.Grenade)
+            {
+                damage *= Mathf.Max(0.01f, grenadeDamageMultiplier);
+                interval *= Mathf.Max(0.01f, grenadeCooldownMultiplier);
+            }
+            else if (mode == WeaponMode.Projectile)
             {
                 damage *= Mathf.Max(0.01f, projectileDamageMultiplier);
                 interval *= Mathf.Max(0.01f, projectileCooldownMultiplier);
             }
-            return new ShotStats(damage, Mathf.Max(0.02f, interval), hand.ThumbActive);
+            return new ShotStats(damage, Mathf.Max(0.02f, interval), mode);
         }
+        public WeaponMode ResolveMode(WeaponMode mode) => mode == WeaponMode.Grenade && !grenadeEnabled ? WeaponMode.Ray : mode;
         public float EvaluateFuelCost(ShotStats shot, float fuelPerDamage)
         {
             float costDamage = shot.Damage;
-            if (!shot.Hitscan)
+            if (shot.Mode == WeaponMode.Grenade)
+            {
+                costDamage /= Mathf.Max(0.01f, grenadeDamageMultiplier);
+                costDamage *= Mathf.Max(1.01f, grenadeFuelMultiplier);
+            }
+            else if (!shot.Hitscan)
             {
                 costDamage /= Mathf.Max(0.01f, projectileDamageMultiplier);
                 costDamage *= 1f - Mathf.Clamp01(projectileFuelEfficiency);
@@ -101,6 +129,12 @@ namespace HandShooter
                 Mathf.Max(0f, directDamage) / Mathf.Max(0.01f, explosionReferenceDamage),
                 Mathf.Clamp01(explosionRadiusExponent));
             return new ExplosionStats(damage, Mathf.Min(Mathf.Max(0f, explosionMaxRadius), radius));
+        }
+        public ExplosionStats EvaluateGrenadeExplosion(float grenadeDamage)
+        {
+            float baseShotDamage = grenadeDamage / Mathf.Max(0.01f, grenadeDamageMultiplier);
+            return new ExplosionStats(grenadeDamage, EvaluateExplosion(baseShotDamage *
+                Mathf.Max(0.01f, projectileDamageMultiplier)).Radius * Mathf.Max(1.01f, grenadeRadiusMultiplier));
         }
         private void OnValidate()
         {
@@ -122,9 +156,12 @@ namespace HandShooter
     {
         public readonly float Damage;
         public readonly float Interval;
-        public readonly bool Hitscan;
+        public readonly WeaponMode Mode;
+        public bool Hitscan => Mode == WeaponMode.Ray;
         public ShotStats(float damage, float interval, bool hitscan)
-        { Damage = damage; Interval = interval; Hitscan = hitscan; }
+            : this(damage, interval, hitscan ? WeaponMode.Ray : WeaponMode.Projectile) { }
+        public ShotStats(float damage, float interval, WeaponMode mode)
+        { Damage = damage; Interval = interval; Mode = mode; }
     }
 }
 

@@ -108,7 +108,7 @@ namespace HandShooter
             // EventSystem could not hit them even though the Buttons were enabled.
             foreach (Button button in root.GetComponentsInChildren<Button>(true))
                 if (button.targetGraphic is Graphic graphic) graphic.raycastTarget = true;
-            thumb.onClick.AddListener(() => weapon.Hand.ThumbActive = !weapon.Hand.ThumbActive);
+            thumb.onClick.AddListener(weapon.CycleMode);
             resume.onClick.AddListener(() => player.SetMenuOpen(false));
             presetFeedback = root.Find("Hand Menu Panel/Menu Footer")?.GetComponent<Text>();
             for (int i = 0; i < HandPresetStore.SlotCount; i++)
@@ -169,8 +169,9 @@ namespace HandShooter
 
             var stats = weapon.Stats;
             var hand = weapon.Hand;
-            var blast = weapon.settings.EvaluateExplosion(stats.Damage);
-            Color accent = stats.Hitscan ? mint : orange;
+            bool grenade = stats.Mode == WeaponMode.Grenade;
+            var blast = grenade ? weapon.settings.EvaluateGrenadeExplosion(stats.Damage) : weapon.settings.EvaluateExplosion(stats.Damage);
+            Color accent = grenade ? weapon.settings.grenadeColor : stats.Hitscan ? mint : orange;
             float fuelFraction = Mathf.Clamp01(weapon.FuelFraction);
             fuelFillRect.anchorMin = Vector2.zero;
             fuelFillRect.anchorMax = new Vector2(fuelFraction, 1f);
@@ -191,35 +192,40 @@ namespace HandShooter
             fuelLabel.text = station ? $"CARGANDO COMBUSTIBLE · {station.Progress:P0}" : "COMBUSTIBLE";
             string fuel = unlimitedFuel ? "INFINITO" : $"{weapon.Fuel:0}/{weapon.tankCapacity:0}";
             tankLabel.text = $"{fuel}   ·   TANQUES ×{weapon.SpareTankCount}";
-            debugText.text = $"{(stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.GetFuelCost(stats):0.##} COMBUSTIBLE / DISPARO";
+            debugText.text = $"{(grenade ? "GRANADA" : stats.Hitscan ? "RAYCAST" : "PROYECTIL")}  /  {hand.ActiveCount} DEDO(S)\nDAÑO {stats.Damage:0.##}  ·  ESPERA {stats.Interval:0.##} s  ·  VELOCIDAD {weapon.settings.moveSpeed:0.##} m/s\nCOSTO {weapon.GetFuelCost(stats):0.##} COMBUSTIBLE / DISPARO";
             if (!stats.Hitscan) debugText.text += $"\nÁREA {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
             if (hitText) hitText.text = Time.time - weapon.LastHitTime < 0.5f ? $"IMPACTO  -{weapon.LastHitDamage:0.##}" : "";
             if (!MenuRoot.activeSelf) return;
             for (int digit = 0; digit < HandPresetStore.SlotCount; digit++)
             {
                 HandPreset preset = weapon.Presets.Get(digit);
-                bool matches = preset.Matches(hand);
+                WeaponMode presetMode = weapon.settings.ResolveMode(preset.Mode);
+                bool matches = preset.IsSaved && preset.ActiveMask == hand.ActiveMask &&
+                    (!hand.ThumbUnlocked || presetMode == stats.Mode);
                 presetButtons[digit].image.color = matches ? mint : new Color(0.13f, 0.2f, 0.23f);
                 presetLabels[digit].color = matches ? new Color(0.02f, 0.09f, 0.08f) : ink;
                 string group = "";
                 for (int finger = 0; finger < 4; finger++)
                     if ((preset.ActiveMask & (1 << finger)) != 0) group += (finger + 1).ToString();
                 presetLabels[digit].text = preset.IsSaved
-                    ? $"[{digit}]  {(matches ? "ACTUAL" : "GUARDADO")}\n{group} · {(preset.ThumbActive || !hand.ThumbUnlocked ? "RAYO" : "PROY.")}"
+                    ? $"[{digit}]  {(matches ? "ACTUAL" : "GUARDADO")}\n{group} · {(presetMode == WeaponMode.Grenade && hand.ThumbUnlocked ? "GRAN." : presetMode == WeaponMode.Ray || !hand.ThumbUnlocked ? "RAYO" : "PROY.")}"
                     : $"[{digit}]\nVACÍO";
             }
             if (presetFeedback && Time.unscaledTime >= presetFeedbackUntil)
                 presetFeedback.text = "Se conservan al reiniciar. En partida: 1–9 / 0 para cambiar.";
-            mode.text = stats.Hitscan ? "RAYCAST / INSTANTÁNEO" : "PROYECTIL / EXPLOSIVO";
+            mode.text = grenade ? "GRANADA / TEMPORIZADA" : stats.Hitscan ? "RAYCAST / INSTANTÁNEO" : "PROYECTIL / EXPLOSIVO";
             mode.color = accent;
             float projectileTotalMultiplier = weapon.settings.projectileDamageMultiplier *
                 (1f + weapon.settings.explosionDamageFraction);
             rules.text = "Siempre queda al menos un cañón activo.\nLos dedos activos forman un solo grupo.\n" +
                 (hand.ThumbUnlocked
-                    ? $"Pulgar activo: raycast, valores base.\nProyectil: daño ×{projectileTotalMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}, combustible −{weapon.settings.projectileFuelEfficiency:P0}.\nDaño total con explosión ({weapon.settings.explosionDamageFraction:P0} del directo)."
+                    ? weapon.settings.grenadeEnabled
+                        ? $"Selector: Rayo → Proyectil → Granada.\nProyectil: daño ×{projectileTotalMultiplier:0.##} (con explosión).\nGranada: {weapon.settings.grenadeFuseDuration:0.##} s desde tocar el suelo.\nMás potencia: más daño, área, costo y espera."
+                        : $"Pulgar activo: raycast, valores base.\nProyectil: daño ×{projectileTotalMultiplier:0.##}, espera ×{weapon.settings.projectileCooldownMultiplier:0.##}, combustible −{weapon.settings.projectileFuelEfficiency:P0}.\nDaño total con explosión ({weapon.settings.explosionDamageFraction:P0} del directo)."
                     : "La mano dispara en modo láser hasta que recojas el pulgar.");
             menuStats.text = $"{stats.Damage:0.##}    DAÑO POR DISPARO\n\n{stats.Interval:0.##} s    ENTRE DISPAROS\n{1f / stats.Interval:0.##}    DISPAROS / SEGUNDO";
             if (!stats.Hitscan) menuStats.text += $"\nEXPLOSIÓN {blast.Damage:0.##} DAÑO / {blast.Radius:0.##} m";
+            if (grenade) menuStats.text += $"\nMECHA {weapon.settings.grenadeFuseDuration:0.##} s · COSTO {weapon.GetFuelCost(stats):0.##}";
             palmText.text = $"{hand.ActiveCount:00} ACTIVO(S) / {4 - hand.ActiveCount:00} INACTIVO(S)\nUN SOLO GRUPO / UN CAÑÓN";
             string[] names = { "ÍNDICE", "MEDIO", "ANULAR", "MEÑIQUE" };
             for (int i = 0; i < 4; i++)
@@ -230,10 +236,11 @@ namespace HandShooter
                 fingerText[i].text = $"{i + 1:00}\n\n{names[i]}\n\n{(hand.IsActive(i) ? "ACTIVO" : "INACTIVO")}";
             }
             thumb.interactable = hand.ThumbUnlocked;
-            thumb.image.color = hand.ThumbUnlocked ? (hand.ThumbActive ? mint : orange) : muted;
+            thumb.image.color = hand.ThumbUnlocked ? accent : muted;
             thumbText.color = new Color(0.025f, 0.07f, 0.08f);
             thumbText.text = hand.ThumbUnlocked
-                ? $"PULGAR {(hand.ThumbActive ? "ACTIVO" : "INACTIVO")}\n{(hand.ThumbActive ? "Raycast · daño y espera base" : $"Proyectil · daño ×{projectileTotalMultiplier:0.##} / espera ×{weapon.settings.projectileCooldownMultiplier:0.##}")}"
+                ? grenade ? $"GRANADA · CAMBIAR MODO\nExplota {weapon.settings.grenadeFuseDuration:0.##} s después de tocar el suelo"
+                    : $"{(weapon.settings.grenadeEnabled ? "CAMBIAR MODO" : $"PULGAR {(hand.ThumbActive ? "ACTIVO" : "INACTIVO")}")}\n{(hand.ThumbActive ? "Raycast · daño y espera base" : $"Proyectil · daño ×{projectileTotalMultiplier:0.##} / espera ×{weapon.settings.projectileCooldownMultiplier:0.##}")}"
                 : "PULGAR SIN EQUIPAR\nModo láser";
         }
 

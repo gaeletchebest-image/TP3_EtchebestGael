@@ -144,6 +144,18 @@ namespace HandShooter
             initialized = false;
             // Keep the origin just outside the struck surface so cover blocks the blast correctly.
             Vector3 origin = point + normal * 0.015f;
+            var recipients = CollectBlastTargets(origin, explosion, hitMask);
+            if (explosion.Damage > 0f && explosion.Radius > 0f)
+                ExplosionEffect.Spawn(origin, explosion.Radius, effectDuration, effectMaterial, effectColor);
+            var directTarget = collider ? collider.GetComponentInParent<DamageTarget>() : null;
+            // Combine direct and splash into one damage event for a useful total in the hit indicator.
+            bool directReceivesSplash = directTarget && recipients.Remove(directTarget);
+            foreach (var target in recipients) ApplyDamage(target, explosion.Damage);
+            if (directTarget) ApplyDamage(directTarget, damage + (directReceivesSplash ? explosion.Damage : 0f));
+            Destroy(gameObject);
+        }
+        internal static HashSet<DamageTarget> CollectBlastTargets(Vector3 origin, ExplosionStats explosion, int hitMask)
+        {
             var recipients = new HashSet<DamageTarget>();
             if (explosion.Damage > 0f && explosion.Radius > 0f)
             {
@@ -158,14 +170,8 @@ namespace HandShooter
                         if (!cover.collider.GetComponentInParent<DamageTarget>()) { blocked = true; break; }
                     if (!blocked) recipients.Add(target);
                 }
-                ExplosionEffect.Spawn(origin, explosion.Radius, effectDuration, effectMaterial, effectColor);
             }
-            var directTarget = collider ? collider.GetComponentInParent<DamageTarget>() : null;
-            // Combine direct and splash into one damage event for a useful total in the hit indicator.
-            bool directReceivesSplash = directTarget && recipients.Remove(directTarget);
-            foreach (var target in recipients) ApplyDamage(target, explosion.Damage);
-            if (directTarget) ApplyDamage(directTarget, damage + (directReceivesSplash ? explosion.Damage : 0f));
-            Destroy(gameObject);
+            return recipients;
         }
         private void ApplyDamage(DamageTarget target, float amount)
         {
