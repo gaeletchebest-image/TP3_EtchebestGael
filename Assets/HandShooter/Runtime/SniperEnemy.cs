@@ -52,6 +52,15 @@ namespace HandShooter
             bestPath = new NavMeshPath();
         }
 
+        private void OnEnable() => health.Damaged += OnDamaged;
+
+        private void OnDamaged(float amount)
+        {
+            if (!settings || health.Health <= 0f) return;
+            // A hit reveals the player even outside the initial detection radius.
+            acquiredTarget = true;
+        }
+
         private void Start()
         {
             if (!settings) { enabled = false; return; }
@@ -487,6 +496,7 @@ namespace HandShooter
 
         private void OnDisable()
         {
+            health.Damaged -= OnDamaged;
             ShooterAudio.Loop(transform, SoundCue.SniperCharge, false);
             StopMoving();
             HideWarning();

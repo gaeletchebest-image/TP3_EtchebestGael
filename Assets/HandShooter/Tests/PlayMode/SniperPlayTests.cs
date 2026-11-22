@@ -133,6 +133,76 @@ namespace HandShooter.Tests
         }
 
         [UnityTest]
+        public IEnumerator PlayerHitOutsideDetectionRangeStartsPersistentPursuit()
+        {
+            settings.detectionRange = 5f;
+            settings.initialDefensePoints = 1;
+            settings.chargeDuration = 30f;
+            yield return Spawn(new Vector3(0f, 1f, 36f), true);
+            sniper.enabled = true;
+            Vector3 start = sniper.transform.position;
+            var health = sniper.GetComponent<DamageTarget>();
+            Assert.That(health.TakePlayerShotDamage(0f), Is.False);
+            Assert.That(health.TakePlayerShotDamage(-1f), Is.False);
+            yield return new WaitForSeconds(0.2f);
+            Assert.That(sniper.State, Is.EqualTo(SniperEnemy.AttackState.Searching));
+            Assert.That(Vector3.Distance(start, sniper.transform.position), Is.LessThan(0.1f));
+
+            Assert.That(health.TakePlayerShotDamage(1f), Is.True);
+            Assert.That(health.DefensePoints, Is.EqualTo(1), "An armored hit must also reveal the player.");
+            yield return new WaitForSeconds(0.5f);
+            Assert.That(sniper.State, Is.EqualTo(SniperEnemy.AttackState.Repositioning));
+            Assert.That(start.z - sniper.transform.position.z, Is.GreaterThan(1f));
+            Assert.That(Vector3.Distance(sniper.transform.position, player.transform.position),
+                Is.GreaterThan(settings.detectionRange));
+            Assert.That(sniper.ShotsFired, Is.Zero);
+        }
+
+        [UnityTest]
+        public IEnumerator HitOutsideDetectionRangePursuesAroundCoverBeforeCharging()
+        {
+            settings.detectionRange = 5f;
+            settings.chargeDuration = 30f;
+            Wall(new Vector3(0f, 1.5f, 5f));
+            yield return Spawn(new Vector3(0f, 1f, 18f), true);
+            sniper.enabled = true;
+            sniper.Simulate(0.1f);
+            Assert.That(sniper.State, Is.EqualTo(SniperEnemy.AttackState.Searching));
+            sniper.GetComponent<DamageTarget>().TakePlayerShotDamage(1f);
+            sniper.Simulate(0.1f);
+            Assert.That(sniper.State, Is.EqualTo(SniperEnemy.AttackState.Repositioning));
+            Assert.That(sniper.ShotsFired, Is.Zero);
+
+            Vector3 start = sniper.transform.position;
+            float started = Time.realtimeSinceStartup;
+            while (sniper.State != SniperEnemy.AttackState.Charging && Time.realtimeSinceStartup - started < 9f)
+                yield return null;
+            Assert.That(Vector3.Distance(start, sniper.transform.position), Is.GreaterThan(1f));
+            Assert.That(sniper.State, Is.EqualTo(SniperEnemy.AttackState.Charging));
+            Assert.That(sniper.ShotsFired, Is.Zero);
+            Assert.That(player.IsDead, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator HitDuringChargePreservesAttackProgress()
+        {
+            yield return Spawn(new Vector3(0f, 1f, 10f));
+            Time.timeScale = 0f;
+            sniper.enabled = true;
+            BeginCharge();
+            sniper.Simulate(0.8f);
+            float progress = sniper.ChargeProgress;
+            Assert.That(sniper.IsAimLocked, Is.True);
+            sniper.GetComponent<DamageTarget>().TakePlayerShotDamage(1f);
+            Assert.That(sniper.State, Is.EqualTo(SniperEnemy.AttackState.Charging));
+            Assert.That(sniper.ChargeProgress, Is.EqualTo(progress));
+            Assert.That(sniper.IsAimLocked, Is.True);
+            sniper.Simulate(0.21f);
+            Assert.That(sniper.ShotsFired, Is.EqualTo(1));
+            Assert.That(player.IsDead, Is.True);
+        }
+
+        [UnityTest]
         public IEnumerator RealPrefabKillsPlayerUsingNormalFrameUpdates()
         {
             yield return Spawn(new Vector3(6f, 1f, 8f), true);

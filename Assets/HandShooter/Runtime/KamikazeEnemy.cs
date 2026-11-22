@@ -20,6 +20,16 @@ namespace HandShooter
             damageTarget = GetComponent<DamageTarget>();
         }
 
+        private void OnEnable() => damageTarget.Damaged += OnDamaged;
+
+        private void OnDamaged(float amount)
+        {
+            if (!settings || hasDetonated || damageTarget.Health <= 0f) return;
+            if (!target) target = FindFirstObjectByType<PrototypePlayer>();
+            if (!hasAcquiredTarget) ShooterAudio.Play(SoundCue.EnemyAlert, transform.position);
+            hasAcquiredTarget = true;
+        }
+
         private void Start()
         {
             if (!target) target = FindFirstObjectByType<PrototypePlayer>();
@@ -54,7 +64,11 @@ namespace HandShooter
                 transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
         }
 
-        private void OnDisable() => ShooterAudio.Loop(transform, SoundCue.KamikazeChase, false);
+        private void OnDisable()
+        {
+            damageTarget.Damaged -= OnDamaged;
+            ShooterAudio.Loop(transform, SoundCue.KamikazeChase, false);
+        }
 
         private bool CanSeeTarget(float distance)
         {
